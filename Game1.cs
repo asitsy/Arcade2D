@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Arcade2D.Entities;
+using Arcade2D.Utils;
 
 namespace Arcade2D;
 
@@ -29,7 +30,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _pixel.SetData(new[]
         {
-            new Color(255, 182, 193)
+            ColorPalette.PlayerPink
         });
 
         _player = new Player(
@@ -47,7 +48,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(new Color(18, 20, 38));
+        GraphicsDevice.Clear(ColorPalette.Background);
 
         _spriteBatch.Begin();
 

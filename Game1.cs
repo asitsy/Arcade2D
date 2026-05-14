@@ -1,7 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Arcade2D.Entities;
 
-namespace Game;
+namespace Arcade2D;
 
 public class Game1 : Microsoft.Xna.Framework.Game
 {

@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace Game.Interfaces;
+namespace Arcade2D.Interfaces;
 
 public interface IUpdatable
 {

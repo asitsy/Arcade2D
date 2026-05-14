@@ -1,8 +1,8 @@
-using Game.Interfaces;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Arcade2D.Interfaces;
 
-namespace Game.Entities;
+namespace Arcade2D.Entities;
 
 public abstract class Entity : IUpdatable, IRenderable
 {

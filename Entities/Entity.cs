@@ -4,7 +4,7 @@ using Arcade2D.Interfaces;
 
 namespace Arcade2D.Entities;
 
-public abstract class Entity : IUpdatable, IRenderable
+public abstract class Entity : IUpdatable, IRenderable, ICollidable
 {
     public Vector2 Position { get; set; }
 
@@ -25,7 +25,19 @@ public abstract class Entity : IUpdatable, IRenderable
     {
         if (Texture != null)
         {
-            spriteBatch.Draw(Texture, Position, Color.White);
+            spriteBatch.Draw(
+            Texture,
+            Bounds,
+            Color.White
+            );
         }
     }
+
+    public virtual Rectangle Bounds =>
+    new(
+        (int)Position.X,
+        (int)Position.Y,
+        32,
+        32
+    );
 }

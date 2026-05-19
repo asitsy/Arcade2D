@@ -20,3 +20,10 @@ Zaawansowane Programowanie Obiektowe
 ## Autor
 
 Anastasiia Tsyban
+
+## Informacja
+
+Folder `/docs` zawiera dokumentację projektu.
+
+Planowane materiały: diagramy UML, opisy architektury, learning notes i TODO listy,
+Dodam jeszcze wyjaśnienia implementacji poszczególnych systemów.

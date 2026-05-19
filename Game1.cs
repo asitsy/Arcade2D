@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Arcade2D.Entities;
@@ -11,6 +12,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private SpriteBatch _spriteBatch;
 
     private Player _player;
+    private List<Wall> _walls;
+
     private Texture2D _pixel;
 
     public Game1()
@@ -33,10 +36,27 @@ public class Game1 : Microsoft.Xna.Framework.Game
             ColorPalette.PlayerPink
         });
 
+        Texture2D wallTexture =
+            new Texture2D(GraphicsDevice, 1, 1);
+
+        wallTexture.SetData(new[]
+        {
+            ColorPalette.Lavender
+        });
+
         _player = new Player(
             new Vector2(300, 300),
             _pixel
         );
+
+        _walls = new List<Wall>()
+        {
+            new Wall(new Vector2(100, 100), wallTexture),
+            new Wall(new Vector2(132, 100), wallTexture),
+            new Wall(new Vector2(164, 100), wallTexture),
+            new Wall(new Vector2(196, 100), wallTexture),
+            new Wall(new Vector2(228, 100), wallTexture)
+        };
     }
 
     protected override void Update(GameTime gameTime)
@@ -51,6 +71,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
         GraphicsDevice.Clear(ColorPalette.Background);
 
         _spriteBatch.Begin();
+
+        foreach (Wall wall in _walls)
+        {
+            wall.Draw(_spriteBatch);
+        }
 
         _player.Draw(_spriteBatch);
 

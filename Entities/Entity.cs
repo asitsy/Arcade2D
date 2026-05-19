@@ -4,40 +4,38 @@ using Arcade2D.Interfaces;
 
 namespace Arcade2D.Entities;
 
-public abstract class Entity : IUpdatable, IRenderable, ICollidable
+public abstract class Entity :
+    IUpdatable,
+    IRenderable,
+    ICollidable
 {
     public Vector2 Position { get; set; }
 
-    protected Texture2D Texture;
+    public Texture2D Texture { get; set; }
 
-    protected float Speed = 100f;
+    public float Speed { get; set; } = 200f;
 
     protected Entity(Vector2 position)
     {
         Position = position;
     }
 
-    public virtual void Update(GameTime gameTime)
-    {
-    }
+    public virtual Rectangle Bounds =>
+        new(
+            (int)Position.X,
+            (int)Position.Y,
+            32,
+            32
+        );
 
     public virtual void Draw(SpriteBatch spriteBatch)
     {
-        if (Texture != null)
-        {
-            spriteBatch.Draw(
+        spriteBatch.Draw(
             Texture,
             Bounds,
             Color.White
-            );
-        }
+        );
     }
 
-    public virtual Rectangle Bounds =>
-    new(
-        (int)Position.X,
-        (int)Position.Y,
-        32,
-        32
-    );
+    public abstract void Update(GameTime gameTime);
 }

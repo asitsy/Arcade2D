@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -12,7 +13,9 @@ public class Player : Entity
         Texture = texture;
     }
 
-    public override void Update(GameTime gameTime)
+    public void Update(
+        GameTime gameTime,
+        List<Wall> walls)
     {
         KeyboardState keyboard = Keyboard.GetState();
 
@@ -33,8 +36,38 @@ public class Player : Entity
         if (direction != Vector2.Zero)
             direction.Normalize();
 
-        Position += direction *
-                    Speed *
-                    (float)gameTime.ElapsedGameTime.TotalSeconds;
+        Vector2 nextPosition =
+            Position +
+            direction *
+            Speed *
+            (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        Rectangle nextBounds =
+            new(
+                (int)nextPosition.X,
+                (int)nextPosition.Y,
+                Bounds.Width,
+                Bounds.Height
+            );
+
+        bool collides = false;
+
+        foreach (Wall wall in walls)
+        {
+            if (nextBounds.Intersects(wall.Bounds))
+            {
+                collides = true;
+                break;
+            }
+        }
+
+        if (!collides)
+        {
+            Position = nextPosition;
+        }
+    }
+
+    public override void Update(GameTime gameTime)
+    {
     }
 }

@@ -61,7 +61,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     protected override void Update(GameTime gameTime)
     {
-        _player.Update(gameTime);
+        _player.Update(gameTime, _walls);
 
         base.Update(gameTime);
     }

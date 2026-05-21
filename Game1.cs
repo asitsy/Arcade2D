@@ -78,9 +78,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     protected override void Update(GameTime gameTime)
     {
-        _player.Update(gameTime, _walls);
+    _player.Update(gameTime, _walls);
 
-        base.Update(gameTime);
+    _pellets.RemoveAll(
+        pellet => _player.Bounds.Intersects(pellet.Bounds)
+    );
+
+    base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)

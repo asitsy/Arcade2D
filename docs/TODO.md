@@ -17,7 +17,7 @@
 
 ### Do zrobienia
 - [ ] stworzenie pełnego maze systemu,
-- [ ] pellet system,
+- [x] pellet system,
 - [ ] system punktów,
 - [ ] ghost AI,
 - [ ] power pellets,

@@ -17,6 +17,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private Texture2D _pixel;
 
+    private int _score;
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -78,13 +80,21 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     protected override void Update(GameTime gameTime)
     {
-    _player.Update(gameTime, _walls);
+        _player.Update(gameTime, _walls);
 
-    _pellets.RemoveAll(
-        pellet => _player.Bounds.Intersects(pellet.Bounds)
-    );
+        for (int i = _pellets.Count - 1; i >= 0; i--)
+        {
+            if (_player.Bounds.Intersects(_pellets[i].Bounds))
+            {
+                _pellets.RemoveAt(i);
 
-    base.Update(gameTime);
+                _score += 10;
+
+                System.Console.WriteLine($"Score: {_score}");
+            }
+        }
+
+        base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)

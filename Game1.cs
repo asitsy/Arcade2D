@@ -13,6 +13,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private Player _player;
     private List<Wall> _walls;
+    private List<Pellet> _pellets;
 
     private Texture2D _pixel;
 
@@ -44,6 +45,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
             ColorPalette.Lavender
         });
 
+        Texture2D pelletTexture =
+            new Texture2D(GraphicsDevice, 1, 1);
+
+        pelletTexture.SetData(new[]
+        {
+            ColorPalette.SoftYellow
+        });
+
         _player = new Player(
             new Vector2(300, 300),
             _pixel
@@ -56,6 +65,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
             new Wall(new Vector2(164, 100), wallTexture),
             new Wall(new Vector2(196, 100), wallTexture),
             new Wall(new Vector2(228, 100), wallTexture)
+        };
+
+        _pellets = new List<Pellet>()
+        {
+            new Pellet(new Vector2(300, 100), pelletTexture),
+            new Pellet(new Vector2(350, 100), pelletTexture),
+            new Pellet(new Vector2(400, 100), pelletTexture),
+            new Pellet(new Vector2(450, 100), pelletTexture)
         };
     }
 
@@ -75,6 +92,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
         foreach (Wall wall in _walls)
         {
             wall.Draw(_spriteBatch);
+        }
+
+        foreach (Pellet pellet in _pellets)
+        {
+            pellet.Draw(_spriteBatch);
         }
 
         _player.Draw(_spriteBatch);

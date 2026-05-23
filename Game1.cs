@@ -23,6 +23,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         _graphics = new GraphicsDeviceManager(this);
 
+        _graphics.PreferredBackBufferWidth = 1280;
+        _graphics.PreferredBackBufferHeight = 720;
+
         Content.RootDirectory = "Content";
 
         IsMouseVisible = true;
@@ -56,26 +59,67 @@ public class Game1 : Microsoft.Xna.Framework.Game
         });
 
         _player = new Player(
-            new Vector2(300, 300),
+            new Vector2(96, 96),
             _pixel
         );
 
-        _walls = new List<Wall>()
+        _walls = new List<Wall>();
+        _pellets = new List<Pellet>();
+
+        int[,] map =
         {
-            new Wall(new Vector2(100, 100), wallTexture),
-            new Wall(new Vector2(132, 100), wallTexture),
-            new Wall(new Vector2(164, 100), wallTexture),
-            new Wall(new Vector2(196, 100), wallTexture),
-            new Wall(new Vector2(228, 100), wallTexture)
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+            {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+            {1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1},
+            {1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,1},
+            {1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,1},
+            {1,0,0,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,0,1,0,1},
+            {1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1},
+            {1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1},
+            {1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1},
+            {1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1},
+            {1,1,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,1},
+            {1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1},
+            {1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,0,1},
+            {1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,0,1,0,1},
+            {1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,0,1,0,1},
+            {1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1},
+            {1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,0,1,0,1},
+            {1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1,0,1},
+            {1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,0,1},
+            {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
         };
 
-        _pellets = new List<Pellet>()
+        int tileSize = 32;
+
+        for (int row = 0; row < map.GetLength(0); row++)
         {
-            new Pellet(new Vector2(300, 100), pelletTexture),
-            new Pellet(new Vector2(350, 100), pelletTexture),
-            new Pellet(new Vector2(400, 100), pelletTexture),
-            new Pellet(new Vector2(450, 100), pelletTexture)
-        };
+            for (int col = 0; col < map.GetLength(1); col++)
+            {
+                Vector2 position =
+                    new Vector2(
+                        col * tileSize,
+                        row * tileSize
+                    );
+
+                if (map[row, col] == 1)
+                {
+                    _walls.Add(
+                        new Wall(position, wallTexture)
+                    );
+                }
+                else if (map[row, col] == 0)
+                {
+                    _pellets.Add(
+                        new Pellet(
+                            position + new Vector2(10, 10),
+                            pelletTexture
+                        )
+                    );
+                }
+            }
+        }
     }
 
     protected override void Update(GameTime gameTime)

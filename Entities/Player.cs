@@ -13,6 +13,14 @@ public class Player : Entity
         Texture = texture;
     }
 
+    public override Rectangle Bounds =>
+        new(
+            (int)Position.X,
+            (int)Position.Y,
+            24,
+            24
+        );
+
     public void Update(
         GameTime gameTime,
         List<Wall> walls)

@@ -111,12 +111,15 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
                 else if (map[row, col] == 0)
                 {
-                    _pellets.Add(
-                        new Pellet(
-                            position + new Vector2(10, 10),
-                            pelletTexture
-                        )
-                    );
+                    if ((row + col) % 2 == 0)
+                    {
+                        _pellets.Add(
+                            new Pellet(
+                                position + new Vector2(10, 10),
+                                pelletTexture
+                            )
+                        );
+                    }
                 }
             }
         }
@@ -132,7 +135,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             {
                 _pellets.RemoveAt(i);
 
-                _score += 10;
+                _score += 1;
 
                 System.Console.WriteLine($"Score: {_score}");
             }

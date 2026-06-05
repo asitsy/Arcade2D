@@ -18,4 +18,7 @@ public static class ColorPalette
 
     public static readonly Color DarkBlue =
         new(45, 55, 90);
+
+    public static readonly Color NeonPink =
+        new(255, 46, 126);
 }

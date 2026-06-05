@@ -16,13 +16,13 @@
 ## Gameplay
 
 ### Do zrobienia
-- [ ] stworzenie pełnego maze systemu,
+- [х] stworzenie pełnego maze systemu,
 - [x] pellet system,
 - [x] system punktów, (terminal)
 - [ ] ghost AI,
 - [ ] power pellets,
-- [ ] win / lose conditions,
-- [ ] game restart system.
+- [х] win / lose conditions,
+- [х] game restart system.
 
 ---
 
@@ -30,8 +30,8 @@
 
 ### Do zrobienia
 - [ ] CollisionManager,
-- [ ] EntityManager,
-- [ ] map loading system,
+- [х] EntityManager,
+- [х] map loading system,
 - [ ] state management,
 - [ ] async systems,
 - [ ] LINQ usage in entity systems.
@@ -43,8 +43,8 @@
 ### Do zrobienia
 - [ ] replace placeholder squares with sprites,
 - [ ] animations,
-- [ ] menu system,
-- [ ] score UI,
+- [х] menu system,
+- [х] score UI,
 - [ ] sound effects,
 - [ ] background music.
 

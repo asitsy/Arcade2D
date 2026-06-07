@@ -29,16 +29,18 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private int _score;
     private Texture2D _dimTexture;
 
-    // --- ЗМІННІ ДЛЯ МЕХАНІКИ ЗАМОРОЗКИ ---
     private float _freezeTimer = 0f;
     private bool IsGhostsFrozen => _freezeTimer > 0f;
-    // -------------------------------------
+
+    private readonly Vector2 _mapOffset = new Vector2(16, 16);
 
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
-        _graphics.PreferredBackBufferWidth = 1280;
-        _graphics.PreferredBackBufferHeight = 720;
+        
+        _graphics.PreferredBackBufferWidth = 904;
+        _graphics.PreferredBackBufferHeight = 704;
+        
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
     }
@@ -58,14 +60,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (File.Exists(fontPath))
         {
             byte[] fontData = File.ReadAllBytes(fontPath);
-            _gameFont = TtfFontBaker.Bake(fontData, 24, 1024, 1024, new[] { CharacterRange.BasicLatin })
+            _gameFont = TtfFontBaker.Bake(fontData, 22, 1024, 1024, new[] { CharacterRange.BasicLatin })
                                     .CreateSpriteFont(GraphicsDevice);
         }
         else
         {
             if (File.Exists("Arial.ttf"))
             {
-                _gameFont = TtfFontBaker.Bake(File.ReadAllBytes("Arial.ttf"), 24, 1024, 1024, new[] { CharacterRange.BasicLatin })
+                _gameFont = TtfFontBaker.Bake(File.ReadAllBytes("Arial.ttf"), 22, 1024, 1024, new[] { CharacterRange.BasicLatin })
                                         .CreateSpriteFont(GraphicsDevice);
             }
         }
@@ -82,7 +84,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private void RestartGame()
     {
         _score = 0;
-        _freezeTimer = 0f; // Скидаємо таймер при перезапуску
+        _freezeTimer = 0f;
         _currentState = GameState.Playing;
         _entityManager.Clear();
 
@@ -98,16 +100,15 @@ public class Game1 : Microsoft.Xna.Framework.Game
         Texture2D ghostTexture = new Texture2D(GraphicsDevice, 1, 1);
         ghostTexture.SetData(new[] { ColorPalette.NeonPink });
 
-        _player = new Player(new Vector2(36, 36), _pixel);
+        _player = new Player(new Vector2(32 * 10 + 4, 32 * 10 + 4) + _mapOffset, _pixel);
         _entityManager.Add(_player);
 
-        // КЛАСИЧНА ЧЕТВІРКА ПРИВИДІВ, ІДЕАЛЬНО РОЗКИДАНА ПО КАРТІ
         _ghosts = new List<Ghost>
         {
-            new(new Vector2(32 * 13, 32 * 1), ghostTexture),  // Зверху по центру
-            new(new Vector2(32 * 1, 32 * 19), ghostTexture),  // Лівий нижній кут
-            new(new Vector2(32 * 26, 32 * 19), ghostTexture), // Правий нижній кут
-            new(new Vector2(32 * 26, 32 * 2), ghostTexture)   // Правий верхній кут
+            new(new Vector2(32 * 1, 32 * 1) + _mapOffset, ghostTexture),
+            new(new Vector2(32 * 19, 32 * 1) + _mapOffset, ghostTexture),
+            new(new Vector2(32 * 1, 32 * 19) + _mapOffset, ghostTexture),
+            new(new Vector2(32 * 19, 32 * 19) + _mapOffset, ghostTexture)
         };
         foreach (var ghost in _ghosts) _entityManager.Add(ghost);
 
@@ -117,35 +118,38 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         int[,] map =
         {
-            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-            {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-            {1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1},
-            {1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,1},
-            {1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,1},
-            {1,0,0,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,0,1,0,1},
-            {1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1},
-            {1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1},
-            {1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1},
-            {1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1},
-            {1,1,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,1},
-            {1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1},
-            {1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,0,1},
-            {1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,0,1,0,1},
-            {1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,0,1,0,1},
-            {1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1},
-            {1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,0,1,0,1},
-            {1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1,0,1},
-            {1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,0,1},
-            {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+            {1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1},
+            {1,0,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,1},
+            {1,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,0,1},
+            {1,0,1,0,1,1,1,1,0,1,0,1,0,1,1,1,1,0,1,0,1},
+            {1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1},
+            {1,1,1,0,1,0,1,1,1,1,0,1,1,1,0,1,0,1,1,0,1},
+            {1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,1},
+            {1,0,1,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1},
+            {1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1},
+            {1,1,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,1,1,1},
+            {1,0,0,0,1,0,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1},
+            {1,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,1,1,0,1},
+            {1,0,1,0,0,0,1,1,1,1,0,1,1,1,1,0,0,0,1,0,1},
+            {1,0,1,1,1,0,1,0,0,0,0,0,0,1,0,0,1,0,1,0,1},
+            {1,0,0,0,0,0,1,0,1,1,1,1,0,1,0,1,1,0,0,0,1},
+            {1,0,1,1,1,0,0,0,1,0,0,1,0,0,0,0,1,0,1,0,1},
+            {1,0,1,0,0,0,1,0,1,0,0,1,1,1,1,0,1,0,1,0,1},
+            {1,0,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1},
+            {1,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1,1,0,0,0,1},
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
         };
 
         int tileSize = 32;
+
         for (int row = 0; row < map.GetLength(0); row++)
         {
             for (int col = 0; col < map.GetLength(1); col++)
             {
-                Vector2 pos = new Vector2(col * tileSize, row * tileSize);
+
+                Vector2 pos = new Vector2(col * tileSize, row * tileSize) + _mapOffset;
+
                 if (map[row, col] == 1)
                 {
                     var wall = new Wall(pos, wallTexture);
@@ -154,12 +158,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
                 else if (map[row, col] == 0)
                 {
-                    // Супер-пігулки зміщені, щоб не заважати старту
                     bool isPowerPellet =
-                        (row == 1 && col == 2) ||
-                        (row == 1 && col == 25) ||
+                        (row == 1 && col == 1) ||
+                        (row == 3 && col == 12) ||
                         (row == 19 && col == 1) ||
-                        (row == 19 && col == 26);
+                        (row == 16 && col == 19);
 
                     if (isPowerPellet)
                     {
@@ -167,10 +170,12 @@ public class Game1 : Microsoft.Xna.Framework.Game
                         _powerPellets.Add(powerPellet);
                         _entityManager.Add(powerPellet);
                     }
+
                     else if ((row + col) % 2 == 0)
                     {
-                        // Прибираємо звичайну пігулку з-під гравця
-                        if (!(row == 1 && col == 1))
+                        bool isInCenterZone = (row >= 9 && row <= 11) && (col >= 9 && col <= 11);
+
+                        if (!isInCenterZone)
                         {
                             var pellet = new Pellet(pos + new Vector2(10, 10), pelletTexture);
                             _pellets.Add(pellet);
@@ -190,7 +195,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
         {
             _player.Update(gameTime, _walls);
 
-            // Оновлення заморозки
             if (IsGhostsFrozen)
             {
                 _freezeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -201,7 +205,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 if (!IsGhostsFrozen)
                 {
                     ghost.Update(gameTime, _walls);
-                    
+
                     if (_player.Bounds.Intersects(ghost.Bounds))
                     {
                         _currentState = GameState.GameOver;
@@ -209,7 +213,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
             }
 
-            // Збирання пігулок
             for (int i = _pellets.Count - 1; i >= 0; i--)
             {
                 if (_player.Bounds.Intersects(_pellets[i].Bounds))
@@ -220,7 +223,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
             }
 
-            // Збирання супер-пігулок
             for (int i = _powerPellets.Count - 1; i >= 0; i--)
             {
                 if (_player.Bounds.Intersects(_powerPellets[i].Bounds))
@@ -228,13 +230,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
                     _entityManager.DestroyEntity(_powerPellets[i]);
                     _powerPellets.RemoveAt(i);
                     _score += 10;
-                    
                     _freezeTimer = 5f;
-                    System.Console.WriteLine("POWER PELLET COLLECTED! GHOSTS FROZEN!");
                 }
             }
 
-            // Умова перемоги
             if (_pellets.Count == 0 && _powerPellets.Count == 0)
             {
                 _currentState = GameState.Victory;
@@ -272,31 +271,35 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_gameFont != null)
         {
-            _spriteBatch.DrawString(_gameFont, $"SCORE: {_score}", new Vector2(930, 40), ColorPalette.SoftYellow);
-            _spriteBatch.DrawString(_gameFont, $"PELLETS LEFT: {_pellets.Count + _powerPellets.Count}", new Vector2(930, 80), ColorPalette.Lavender);
-            
+            _spriteBatch.DrawString(_gameFont, "ARCADE 2D", new Vector2(710, 30), Color.White);
+            _spriteBatch.DrawString(_gameFont, "----------", new Vector2(710, 55), ColorPalette.Lavender);
+
+            _spriteBatch.DrawString(_gameFont, $"SCORE: {_score}", new Vector2(710, 90), ColorPalette.SoftYellow);
+            _spriteBatch.DrawString(_gameFont, $"LEFT: {_pellets.Count + _powerPellets.Count}", new Vector2(710, 130), ColorPalette.Lavender);
+
             if (IsGhostsFrozen)
             {
-                _spriteBatch.DrawString(_gameFont, $"FREEZE: {_freezeTimer:F1}s", new Vector2(930, 120), Color.Cyan);
+                _spriteBatch.DrawString(_gameFont, "FREEZE:", new Vector2(710, 180), Color.Cyan);
+                _spriteBatch.DrawString(_gameFont, $"{_freezeTimer:F1}s", new Vector2(710, 210), Color.Cyan);
             }
         }
 
         if (_currentState == GameState.GameOver)
         {
-            _spriteBatch.Draw(_dimTexture, new Rectangle(0, 0, 1280, 720), Color.White);
+            _spriteBatch.Draw(_dimTexture, new Rectangle(0, 0, 904, 704), Color.White);
             if (_gameFont != null)
             {
-                _spriteBatch.DrawString(_gameFont, "GAME OVER", new Vector2(540, 300), ColorPalette.NeonPink);
-                _spriteBatch.DrawString(_gameFont, "Press ENTER to Restart", new Vector2(490, 350), Color.White);
+                _spriteBatch.DrawString(_gameFont, "GAME OVER", new Vector2(260, 300), ColorPalette.NeonPink);
+                _spriteBatch.DrawString(_gameFont, "Press ENTER to Restart", new Vector2(200, 350), Color.White);
             }
         }
         else if (_currentState == GameState.Victory)
         {
-            _spriteBatch.Draw(_dimTexture, new Rectangle(0, 0, 1280, 720), Color.White);
+            _spriteBatch.Draw(_dimTexture, new Rectangle(0, 0, 904, 704), Color.White);
             if (_gameFont != null)
             {
-                _spriteBatch.DrawString(_gameFont, "YOU WIN!", new Vector2(550, 300), ColorPalette.SoftYellow);
-                _spriteBatch.DrawString(_gameFont, "Press ENTER to Play Again", new Vector2(470, 350), Color.White);
+                _spriteBatch.DrawString(_gameFont, "YOU WIN!", new Vector2(280, 300), ColorPalette.SoftYellow);
+                _spriteBatch.DrawString(_gameFont, "Press ENTER to Play Again", new Vector2(190, 350), Color.White);
             }
         }
 

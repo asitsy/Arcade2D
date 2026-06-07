@@ -3,7 +3,7 @@ using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using SpriteFontPlus; // Бібліотека для динамічних шрифтів dotnet add package SpriteFontPlus
+using SpriteFontPlus; 
 using Arcade2D.Entities;
 using Arcade2D.Utils;
 using Arcade2D.Managers;
@@ -16,10 +16,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private SpriteBatch _spriteBatch;
 
     private Player _player;
-    private List<Ghost> _ghosts;
-    private List<Wall> _walls;
-    private List<Pellet> _pellets;
-    private List<PowerPellet> _powerPellets;
+    
     private EntityManager _entityManager;
     private GameState _currentState;
 
@@ -37,10 +34,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
-        
         _graphics.PreferredBackBufferWidth = 904;
         _graphics.PreferredBackBufferHeight = 704;
-        
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
     }
@@ -103,18 +98,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _player = new Player(new Vector2(32 * 10 + 4, 32 * 10 + 4) + _mapOffset, _pixel);
         _entityManager.Add(_player);
 
-        _ghosts = new List<Ghost>
-        {
-            new(new Vector2(32 * 1, 32 * 1) + _mapOffset, ghostTexture),
-            new(new Vector2(32 * 19, 32 * 1) + _mapOffset, ghostTexture),
-            new(new Vector2(32 * 1, 32 * 19) + _mapOffset, ghostTexture),
-            new(new Vector2(32 * 19, 32 * 19) + _mapOffset, ghostTexture)
-        };
-        foreach (var ghost in _ghosts) _entityManager.Add(ghost);
-
-        _walls = new List<Wall>();
-        _pellets = new List<Pellet>();
-        _powerPellets = new List<PowerPellet>();
+        _entityManager.Add(new Ghost(new Vector2(32 * 1, 32 * 1) + _mapOffset, ghostTexture)); // пишу привидів
+        _entityManager.Add(new Ghost(new Vector2(32 * 19, 32 * 1) + _mapOffset, ghostTexture));
+        _entityManager.Add(new Ghost(new Vector2(32 * 1, 32 * 19) + _mapOffset, ghostTexture));
+        _entityManager.Add(new Ghost(new Vector2(32 * 19, 32 * 19) + _mapOffset, ghostTexture));
 
         int[,] map =
         {
@@ -147,14 +134,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
         {
             for (int col = 0; col < map.GetLength(1); col++)
             {
-
                 Vector2 pos = new Vector2(col * tileSize, row * tileSize) + _mapOffset;
 
                 if (map[row, col] == 1)
                 {
-                    var wall = new Wall(pos, wallTexture);
-                    _walls.Add(wall);
-                    _entityManager.Add(wall);
+                    _entityManager.Add(new Wall(pos, wallTexture));
                 }
                 else if (map[row, col] == 0)
                 {
@@ -166,20 +150,15 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
                     if (isPowerPellet)
                     {
-                        var powerPellet = new PowerPellet(pos + new Vector2(8, 8), powerPelletTexture);
-                        _powerPellets.Add(powerPellet);
-                        _entityManager.Add(powerPellet);
+                        _entityManager.Add(new PowerPellet(pos + new Vector2(8, 8), powerPelletTexture));
                     }
-
                     else if ((row + col) % 2 == 0)
                     {
                         bool isInCenterZone = (row >= 9 && row <= 11) && (col >= 9 && col <= 11);
 
                         if (!isInCenterZone)
                         {
-                            var pellet = new Pellet(pos + new Vector2(10, 10), pelletTexture);
-                            _pellets.Add(pellet);
-                            _entityManager.Add(pellet);
+                            _entityManager.Add(new Pellet(pos + new Vector2(10, 10), pelletTexture));
                         }
                     }
                 }
@@ -193,18 +172,23 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_currentState == GameState.Playing)
         {
-            _player.Update(gameTime, _walls);
+            var currentWalls = _entityManager.GetEntities<Wall>(); // актуальний список
+            var currentGhosts = _entityManager.GetEntities<Ghost>();
+            var currentPellets = _entityManager.GetEntities<Pellet>();
+            var currentPowerPellets = _entityManager.GetEntities<PowerPellet>();
+
+            _player.Update(gameTime, currentWalls);
 
             if (IsGhostsFrozen)
             {
                 _freezeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            foreach (Ghost ghost in _ghosts)
+            foreach (Ghost ghost in currentGhosts)
             {
                 if (!IsGhostsFrozen)
                 {
-                    ghost.Update(gameTime, _walls);
+                    ghost.Update(gameTime, currentWalls);
 
                     if (_player.Bounds.Intersects(ghost.Bounds))
                     {
@@ -213,28 +197,27 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
             }
 
-            for (int i = _pellets.Count - 1; i >= 0; i--)
+            for (int i = currentPellets.Count - 1; i >= 0; i--)
             {
-                if (_player.Bounds.Intersects(_pellets[i].Bounds))
+                if (_player.Bounds.Intersects(currentPellets[i].Bounds))
                 {
-                    _entityManager.DestroyEntity(_pellets[i]);
-                    _pellets.RemoveAt(i);
+                    _entityManager.DestroyEntity(currentPellets[i]);
                     _score++;
                 }
             }
 
-            for (int i = _powerPellets.Count - 1; i >= 0; i--)
+            for (int i = currentPowerPellets.Count - 1; i >= 0; i--)
             {
-                if (_player.Bounds.Intersects(_powerPellets[i].Bounds))
+                if (_player.Bounds.Intersects(currentPowerPellets[i].Bounds))
                 {
-                    _entityManager.DestroyEntity(_powerPellets[i]);
-                    _powerPellets.RemoveAt(i);
+                    _entityManager.DestroyEntity(currentPowerPellets[i]);
                     _score += 10;
                     _freezeTimer = 5f;
                 }
             }
 
-            if (_pellets.Count == 0 && _powerPellets.Count == 0)
+            if (_entityManager.GetEntities<Pellet>().Count == 0 && // перевірка
+                _entityManager.GetEntities<PowerPellet>().Count == 0)
             {
                 _currentState = GameState.Victory;
             }
@@ -263,7 +246,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
             Texture2D freezeOverlay = new Texture2D(GraphicsDevice, 1, 1);
             freezeOverlay.SetData(new[] { new Color(0, 150, 255, 100) });
 
-            foreach (Ghost ghost in _ghosts)
+            var currentGhosts = _entityManager.GetEntities<Ghost>();
+            foreach (Ghost ghost in currentGhosts)
             {
                 _spriteBatch.Draw(freezeOverlay, ghost.Bounds, Color.White);
             }
@@ -275,7 +259,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch.DrawString(_gameFont, "----------", new Vector2(710, 55), ColorPalette.Lavender);
 
             _spriteBatch.DrawString(_gameFont, $"SCORE: {_score}", new Vector2(710, 90), ColorPalette.SoftYellow);
-            _spriteBatch.DrawString(_gameFont, $"LEFT: {_pellets.Count + _powerPellets.Count}", new Vector2(710, 130), ColorPalette.Lavender);
+            
+            int totalPelletsLeft = _entityManager.GetEntities<Pellet>().Count + _entityManager.GetEntities<PowerPellet>().Count;
+            _spriteBatch.DrawString(_gameFont, $"LEFT: {totalPelletsLeft}", new Vector2(710, 130), ColorPalette.Lavender);
 
             if (IsGhostsFrozen)
             {

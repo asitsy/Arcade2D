@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using System.Linq; 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Arcade2D.Managers;
 
 namespace Arcade2D.Entities;
 
@@ -22,7 +22,7 @@ public class Player : Entity
             24
         );
 
-    public void Update(GameTime gameTime, List<Wall> walls)
+    public void Update(GameTime gameTime, CollisionManager collisionManager) //параметр
     {
         KeyboardState keyboard = Keyboard.GetState();
         Vector2 direction = Vector2.Zero;
@@ -44,7 +44,7 @@ public class Player : Entity
             Bounds.Height
         );
 
-        bool collides = walls.Any(wall => nextBounds.Intersects(wall.Bounds));         // Перевіряємо за допомогою LINQ, чи перетинається наступна позиція з будь-якою стіною
+        bool collides = collisionManager.CheckWallCollision(nextBounds);         // викликаємо перевірку стін через менеджер
 
         if (!collides)
         {
@@ -54,6 +54,6 @@ public class Player : Entity
 
     public override void Update(GameTime gameTime)
     {
-        // Базовий метод інтерфейсу залишається порожнім (бо вимоги)
+        // Базовий метод інтерфейсу залишається порожнім
     }
 }

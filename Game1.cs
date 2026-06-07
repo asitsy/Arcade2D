@@ -19,7 +19,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private List<Ghost> _ghosts;
     private List<Wall> _walls;
     private List<Pellet> _pellets;
-
+    private List<PowerPellet> _powerPellets;
     private EntityManager _entityManager;
     private GameState _currentState;
 
@@ -28,6 +28,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private int _score;
     private Texture2D _dimTexture;
+
+    // --- ЗМІННІ ДЛЯ МЕХАНІКИ ЗАМОРОЗКИ ---
+    private float _freezeTimer = 0f;
+    private bool IsGhostsFrozen => _freezeTimer > 0f;
+    // -------------------------------------
 
     public Game1()
     {
@@ -77,6 +82,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private void RestartGame()
     {
         _score = 0;
+        _freezeTimer = 0f; // Скидаємо таймер при перезапуску
         _currentState = GameState.Playing;
         _entityManager.Clear();
 
@@ -86,22 +92,28 @@ public class Game1 : Microsoft.Xna.Framework.Game
         Texture2D pelletTexture = new Texture2D(GraphicsDevice, 1, 1);
         pelletTexture.SetData(new[] { ColorPalette.SoftYellow });
 
+        Texture2D powerPelletTexture = new Texture2D(GraphicsDevice, 1, 1);
+        powerPelletTexture.SetData(new[] { ColorPalette.NeonPink });
+
         Texture2D ghostTexture = new Texture2D(GraphicsDevice, 1, 1);
         ghostTexture.SetData(new[] { ColorPalette.NeonPink });
 
         _player = new Player(new Vector2(36, 36), _pixel);
         _entityManager.Add(_player);
 
+        // КЛАСИЧНА ЧЕТВІРКА ПРИВИДІВ, ІДЕАЛЬНО РОЗКИДАНА ПО КАРТІ
         _ghosts = new List<Ghost>
         {
-            new(new Vector2(32 * 13, 32 * 1), ghostTexture),
-            new(new Vector2(32 * 1, 32 * 19), ghostTexture),
-            new(new Vector2(32 * 26, 32 * 11), ghostTexture)
+            new(new Vector2(32 * 13, 32 * 1), ghostTexture),  // Зверху по центру
+            new(new Vector2(32 * 1, 32 * 19), ghostTexture),  // Лівий нижній кут
+            new(new Vector2(32 * 26, 32 * 19), ghostTexture), // Правий нижній кут
+            new(new Vector2(32 * 26, 32 * 2), ghostTexture)   // Правий верхній кут
         };
         foreach (var ghost in _ghosts) _entityManager.Add(ghost);
 
         _walls = new List<Wall>();
         _pellets = new List<Pellet>();
+        _powerPellets = new List<PowerPellet>();
 
         int[,] map =
         {
@@ -142,11 +154,28 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
                 else if (map[row, col] == 0)
                 {
-                    if ((row + col) % 2 == 0)
+                    // Супер-пігулки зміщені, щоб не заважати старту
+                    bool isPowerPellet =
+                        (row == 1 && col == 2) ||
+                        (row == 1 && col == 25) ||
+                        (row == 19 && col == 1) ||
+                        (row == 19 && col == 26);
+
+                    if (isPowerPellet)
                     {
-                        var pellet = new Pellet(pos + new Vector2(10, 10), pelletTexture);
-                        _pellets.Add(pellet);
-                        _entityManager.Add(pellet);
+                        var powerPellet = new PowerPellet(pos + new Vector2(8, 8), powerPelletTexture);
+                        _powerPellets.Add(powerPellet);
+                        _entityManager.Add(powerPellet);
+                    }
+                    else if ((row + col) % 2 == 0)
+                    {
+                        // Прибираємо звичайну пігулку з-під гравця
+                        if (!(row == 1 && col == 1))
+                        {
+                            var pellet = new Pellet(pos + new Vector2(10, 10), pelletTexture);
+                            _pellets.Add(pellet);
+                            _entityManager.Add(pellet);
+                        }
                     }
                 }
             }
@@ -161,28 +190,52 @@ public class Game1 : Microsoft.Xna.Framework.Game
         {
             _player.Update(gameTime, _walls);
 
+            // Оновлення заморозки
+            if (IsGhostsFrozen)
+            {
+                _freezeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+
             foreach (Ghost ghost in _ghosts)
             {
-                ghost.Update(gameTime, _walls);
-
-                if (_player.Bounds.Intersects(ghost.Bounds))
+                if (!IsGhostsFrozen)
                 {
-                    _currentState = GameState.GameOver;
+                    ghost.Update(gameTime, _walls);
+                    
+                    if (_player.Bounds.Intersects(ghost.Bounds))
+                    {
+                        _currentState = GameState.GameOver;
+                    }
                 }
             }
 
+            // Збирання пігулок
             for (int i = _pellets.Count - 1; i >= 0; i--)
             {
                 if (_player.Bounds.Intersects(_pellets[i].Bounds))
                 {
                     _entityManager.DestroyEntity(_pellets[i]);
-                    
                     _pellets.RemoveAt(i);
                     _score++;
                 }
             }
 
-            if (_pellets.Count == 0)
+            // Збирання супер-пігулок
+            for (int i = _powerPellets.Count - 1; i >= 0; i--)
+            {
+                if (_player.Bounds.Intersects(_powerPellets[i].Bounds))
+                {
+                    _entityManager.DestroyEntity(_powerPellets[i]);
+                    _powerPellets.RemoveAt(i);
+                    _score += 10;
+                    
+                    _freezeTimer = 5f;
+                    System.Console.WriteLine("POWER PELLET COLLECTED! GHOSTS FROZEN!");
+                }
+            }
+
+            // Умова перемоги
+            if (_pellets.Count == 0 && _powerPellets.Count == 0)
             {
                 _currentState = GameState.Victory;
             }
@@ -206,10 +259,26 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _entityManager.Draw(_spriteBatch);
 
+        if (IsGhostsFrozen)
+        {
+            Texture2D freezeOverlay = new Texture2D(GraphicsDevice, 1, 1);
+            freezeOverlay.SetData(new[] { new Color(0, 150, 255, 100) });
+
+            foreach (Ghost ghost in _ghosts)
+            {
+                _spriteBatch.Draw(freezeOverlay, ghost.Bounds, Color.White);
+            }
+        }
+
         if (_gameFont != null)
         {
             _spriteBatch.DrawString(_gameFont, $"SCORE: {_score}", new Vector2(930, 40), ColorPalette.SoftYellow);
-            _spriteBatch.DrawString(_gameFont, $"PELLETS LEFT: {_pellets.Count}", new Vector2(930, 80), ColorPalette.Lavender);
+            _spriteBatch.DrawString(_gameFont, $"PELLETS LEFT: {_pellets.Count + _powerPellets.Count}", new Vector2(930, 80), ColorPalette.Lavender);
+            
+            if (IsGhostsFrozen)
+            {
+                _spriteBatch.DrawString(_gameFont, $"FREEZE: {_freezeTimer:F1}s", new Vector2(930, 120), Color.Cyan);
+            }
         }
 
         if (_currentState == GameState.GameOver)

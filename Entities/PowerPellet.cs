@@ -3,25 +3,20 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Arcade2D.Entities;
 
-public class Pellet : Entity
+public class PowerPellet : Pellet
 {
-    public Pellet(
+    public PowerPellet(
         Vector2 position,
         Texture2D texture)
-        : base(position)
+        : base(position, texture)
     {
-        Texture = texture;
     }
 
     public override Rectangle Bounds =>
         new(
             (int)Position.X,
             (int)Position.Y,
-            6,
-            6
+            12,
+            12
         );
-
-    public override void Update(GameTime gameTime)
-    {
-    }
 }

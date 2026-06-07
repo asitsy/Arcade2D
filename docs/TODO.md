@@ -19,8 +19,8 @@
 - [х] stworzenie pełnego maze systemu,
 - [x] pellet system,
 - [x] system punktów, (terminal)
-- [ ] ghost AI,
-- [ ] power pellets,
+- [х] ghost AI,
+- [х] power pellets,
 - [х] win / lose conditions,
 - [х] game restart system.
 
@@ -46,7 +46,8 @@
 - [х] menu system,
 - [х] score UI,
 - [ ] sound effects,
-- [ ] background music.
+- [ ] background music
+- [ ] chce jeszcze dodać timer gry obok planszy oraz liczniki czasu dla power pelletów (zamrożenie ghosts, zwiększona prędkość gracza).
 
 ---
 

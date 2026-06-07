@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq; 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -14,60 +15,36 @@ public class Player : Entity
     }
 
     public override Rectangle Bounds =>
-        new(
+        new Rectangle(
             (int)Position.X,
             (int)Position.Y,
             24,
             24
         );
 
-    public void Update(
-        GameTime gameTime,
-        List<Wall> walls)
+    public void Update(GameTime gameTime, List<Wall> walls)
     {
         KeyboardState keyboard = Keyboard.GetState();
-
         Vector2 direction = Vector2.Zero;
 
-        if (keyboard.IsKeyDown(Keys.W))
-            direction.Y -= 1;
-
-        if (keyboard.IsKeyDown(Keys.S))
-            direction.Y += 1;
-
-        if (keyboard.IsKeyDown(Keys.A))
-            direction.X -= 1;
-
-        if (keyboard.IsKeyDown(Keys.D))
-            direction.X += 1;
+        if (keyboard.IsKeyDown(Keys.W)) direction.Y -= 1;
+        if (keyboard.IsKeyDown(Keys.S)) direction.Y += 1;
+        if (keyboard.IsKeyDown(Keys.A)) direction.X -= 1;
+        if (keyboard.IsKeyDown(Keys.D)) direction.X += 1;
 
         if (direction != Vector2.Zero)
             direction.Normalize();
 
-        Vector2 nextPosition =
-            Position +
-            direction *
-            Speed *
-            (float)gameTime.ElapsedGameTime.TotalSeconds;
+        Vector2 nextPosition = Position + direction * Speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        Rectangle nextBounds =
-            new(
-                (int)nextPosition.X,
-                (int)nextPosition.Y,
-                Bounds.Width,
-                Bounds.Height
-            );
+        Rectangle nextBounds = new Rectangle(
+            (int)nextPosition.X,
+            (int)nextPosition.Y,
+            Bounds.Width,
+            Bounds.Height
+        );
 
-        bool collides = false;
-
-        foreach (Wall wall in walls)
-        {
-            if (nextBounds.Intersects(wall.Bounds))
-            {
-                collides = true;
-                break;
-            }
-        }
+        bool collides = walls.Any(wall => nextBounds.Intersects(wall.Bounds));         // Перевіряємо за допомогою LINQ, чи перетинається наступна позиція з будь-якою стіною
 
         if (!collides)
         {
@@ -77,5 +54,6 @@ public class Player : Entity
 
     public override void Update(GameTime gameTime)
     {
+        // Базовий метод інтерфейсу залишається порожнім (бо вимоги)
     }
 }

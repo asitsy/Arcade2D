@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq; // Використовуємо LINQ на повну
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -12,13 +13,16 @@ public class Ghost : Entity
 
     private readonly Vector2[] _directions =
     {
-        new Vector2(0, -1),
-        new Vector2(0, 1),  
-        new Vector2(-1, 0), 
-        new Vector2(1, 0)   
+        new Vector2(0, -1), // Вгору
+        new Vector2(0, 1),  // Вниз
+        new Vector2(-1, 0), // Ліворуч
+        new Vector2(1, 0)   // Праворуч
     };
 
     private Point _lastTile = new Point(-1, -1);
+    
+    // Зсув карти з вашого Game1.cs (відступи від країв екрану)
+    private readonly Vector2 _mapOffset = new Vector2(16, 16); 
 
     public Ghost(Vector2 position, Texture2D texture) : base(position)
     {
@@ -33,96 +37,75 @@ public class Ghost : Entity
         Vector2 nextPosition = Position + _direction * Speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
         Rectangle nextBounds = new((int)nextPosition.X, (int)nextPosition.Y, Bounds.Width, Bounds.Height);
 
-        bool collision = false;
-        foreach (Wall wall in walls)
-        {
-            if (nextBounds.Intersects(wall.Bounds))
-            {
-                collision = true;
-                break;
-            }
-        }
+        // LINQ: Перевіряємо, чи є стіна безпосередньо перед носом привида
+        bool collision = walls.Any(wall => nextBounds.Intersects(wall.Bounds));
 
-        Point currentTile = new Point((int)Position.X / 32, (int)Position.Y / 32);
+        // Визначаємо точний індекс плитки в масиві карти (0, 1, 2...) з урахуванням зсуву карти
+        Point currentTile = new Point(
+            (int)(Position.X - _mapOffset.X) / 32, 
+            (int)(Position.Y - _mapOffset.Y) / 32
+        );
 
-        bool alignedWithTile = ((int)Position.X % 32 == 0 && (int)Position.Y % 32 == 0) || 
-                              ((int)Position.X % 32 <= 4 && (int)Position.Y % 32 <= 4); 
-
-        if (collision)
-        {
-            ChooseNewDirection(walls, allowReverse: true);
-        }
-        else if (currentTile != _lastTile && alignedWithTile)
+        // Привид приймає рішення про поворот ТОЛЬКИ коли заходить на нову клітинку АБО якщо вперся в стіну
+        if (currentTile != _lastTile || collision)
         {
             _lastTile = currentTile;
-            ChooseNewDirection(walls, allowReverse: false);
-            
-            Position = new Vector2(currentTile.X * 32, currentTile.Y * 32);
-            nextPosition = Position + _direction * Speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+            ChooseNewDirection(walls, currentTile, collision);
         }
 
-        Rectangle finalBounds = new((int)nextPosition.X, (int)nextPosition.Y, Bounds.Width, Bounds.Height);
-        bool finalCollision = false;
-        foreach (Wall wall in walls)
-        {
-            if (finalBounds.Intersects(wall.Bounds))
-            {
-                finalCollision = true;
-                break;
-            }
-        }
-
-        if (!finalCollision)
+        // Рухаємось вперед, якщо шлях вільний
+        if (!collision)
         {
             Position = nextPosition;
         }
     }
 
-    private void ChooseNewDirection(List<Wall> walls, bool allowReverse)
+    private void ChooseNewDirection(List<Wall> walls, Point currentTile, bool allowReverse)
     {
-        List<Vector2> availableDirections = new();
-        Vector2 reverseDirection = -_direction; 
+        Vector2 reverseDirection = -_direction;
 
-        foreach (Vector2 dir in _directions)
-        {
-            Vector2 testPosition = Position + dir * 32;
-            Rectangle testBounds = new((int)testPosition.X, (int)testPosition.Y, Bounds.Width, Bounds.Height);
+        // Математичний ідеальний центр плитки лабіринту, де ЗАРАЗ перебуває привид
+        Vector2 tileCenterPosition = new Vector2(currentTile.X * 32, currentTile.Y * 32) + _mapOffset;
+        
+        // Корекція центру (розмір плитки 32х32, розмір привида 24х24. Різниця 8 пікселів, тобто зсув на 4 для центру)
+        tileCenterPosition += new Vector2(4, 4);
 
-            bool blocked = false;
-            foreach (Wall wall in walls)
+        // СУПЕР-LINQ: Скануємо всі 4 напрямки від ІДЕАЛЬНОГО центру плитки.
+        // Це повністю захищає від випадкового зачіпання стін сусідніх коридорів!
+        var availableDirections = _directions
+            .Where(dir => 
             {
-                if (testBounds.Intersects(wall.Bounds))
-                {
-                    blocked = true;
-                    break;
-                }
-            }
+                // Прораховуємо прямокутник колізії на наступній плитці
+                Vector2 targetPosition = tileCenterPosition + dir * 32;
+                Rectangle testBounds = new((int)targetPosition.X, (int)targetPosition.Y, Bounds.Width, Bounds.Height);
+                
+                // Напрямок вільний, якщо LINQ не знайшов жодної стіни на шляху
+                return !walls.Any(wall => testBounds.Intersects(wall.Bounds));
+            })
+            .Where(dir => allowReverse || dir != reverseDirection) // Заборона розвороту на перехрестях
+            .ToList();
 
-            if (!blocked)
-            {
-                // тут я хотіла зробити стратегічне правило: якщо ми на перехресті, не розвертаємось назад, 
-                // щоб привид йшов ТІЛЬКИ вперед чи повертав набік
-                // назад повертаємо лише якщо це тупик (allowReverse == true).
-                if (dir == reverseDirection && !allowReverse)
-                {
-                    continue; 
-                }
-                availableDirections.Add(dir);
-            }
-        }
-
-        if (availableDirections.Count == 0 && !allowReverse)
+        // Якщо привид у глухому куті — дозволяємо повернутися назад
+        if (!availableDirections.Any() && !allowReverse)
         {
             availableDirections.Add(reverseDirection);
         }
 
-        if (availableDirections.Count > 0)
+        // Обираємо випадковий шлях із дійсно доступних варіантів
+        if (availableDirections.Any())
         {
-            _direction = availableDirections[_random.Next(availableDirections.Count)];
+            _direction = availableDirections.ElementAt(_random.Next(availableDirections.Count));
+            
+            // ЗОЛОТЕ ПРАВИЛО РОЗУМНОГО РУХУ: Примусово вирівнюємо привида по осі повороту.
+            // Якщо він повертає вбік (X), вирівнюємо його по висоті коридору (Y).
+            // Якщо повертає вгору/вниз (Y), вирівнюємо його по ширині коридору (X).
+            if (_direction.X != 0) Position = new Vector2(Position.X, tileCenterPosition.Y);
+            if (_direction.Y != 0) Position = new Vector2(tileCenterPosition.X, Position.Y);
         }
     }
 
     public override void Update(GameTime gameTime)
     {
+        // Порожній через вимоги інтерфейсу
     }
 }

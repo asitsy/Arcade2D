@@ -29,7 +29,7 @@
 ## Architektura
 
 ### Do zrobienia
-- [ ] CollisionManager,
+- [x] CollisionManager,
 - [х] EntityManager,
 - [х] map loading system,
 - [ ] state management,

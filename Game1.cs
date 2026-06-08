@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,9 @@ using SpriteFontPlus;
 using Arcade2D.Entities;
 using Arcade2D.Utils;
 using Arcade2D.Managers;
+
+// Щоб уникнути конфліктів імен типів
+using XnaInput = Microsoft.Xna.Framework.Input;
 
 namespace Arcade2D;
 
@@ -32,20 +36,24 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private readonly Vector2 _mapOffset = new Vector2(16, 16);
 
+    // Прямокутник кнопки PLAY по центру ігрової зони лабіринту
+    private readonly Rectangle _playButtonRect = new Rectangle(230, 300, 260, 70);
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
         _graphics.PreferredBackBufferWidth = 904;
         _graphics.PreferredBackBufferHeight = 704;
         Content.RootDirectory = "Content";
-        IsMouseVisible = true;
+        IsMouseVisible = true; // Курсор миші тепер видно
     }
 
     protected override void LoadContent()
     {
+        // ПОМИЛКУ ВИПРАВЛЕНО ТУТ: тепер вираз чистий і коректний
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _entityManager = new EntityManager();
-        _collisionManager = new CollisionManager(_entityManager); // Ініціалізація
+        _collisionManager = new CollisionManager(_entityManager);
 
         string fontPath = @"/System/Library/Fonts/Supplemental/Courier New.ttf"; 
         if (!File.Exists(fontPath)) fontPath = @"/System/Library/Fonts/Supplemental/Arial.ttf";
@@ -58,10 +66,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
 
         _pixel = new Texture2D(GraphicsDevice, 1, 1);
-        _pixel.SetData(new[] { ColorPalette.PlayerPink });
+        _pixel.SetData(new[] { Color.White }); 
 
         _dimTexture = new Texture2D(GraphicsDevice, 1, 1);
-        _dimTexture.SetData(new[] { new Color(0, 0, 0, 180) });
+        _dimTexture.SetData(new[] { new Color(15, 15, 30, 215) }); // Глибокий стильний темно-синій колір затінення
 
         RestartGame();
     }
@@ -70,7 +78,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         _score = 0;
         _freezeTimer = 0f;
-        _currentState = GameState.Playing;
+        _currentState = GameState.StartMenu; 
         _entityManager.Clear();
 
         Texture2D wallTexture = new Texture2D(GraphicsDevice, 1, 1);
@@ -86,6 +94,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
         ghostTexture.SetData(new[] { ColorPalette.NeonPink });
 
         _player = new Player(new Vector2(32 * 10 + 4, 32 * 10 + 4) + _mapOffset, _pixel);
+        _player.Texture.SetData(new[] { ColorPalette.PlayerPink }); 
+
         _entityManager.Add(_player);
 
         _entityManager.Add(new Ghost(new Vector2(32 * 1, 32 * 1) + _mapOffset, ghostTexture));
@@ -150,17 +160,29 @@ public class Game1 : Microsoft.Xna.Framework.Game
     protected override void Update(GameTime gameTime)
     {
         KeyboardState keyboardState = Keyboard.GetState();
+        MouseState mouseState = Mouse.GetState();
 
-        if (_currentState == GameState.Playing)
+        if (_currentState == GameState.StartMenu)
         {
-            _player.Update(gameTime, _collisionManager); // оновлення гравець
+            // Перевіряємо клік лівою кнопкою миші всередині меж кнопки PLAY
+            bool isMousePressed = mouseState.LeftButton == XnaInput.ButtonState.Pressed;
+            bool isCursorOverButton = _playButtonRect.Contains(mouseState.X, mouseState.Y);
+
+            if ((isMousePressed && isCursorOverButton) || keyboardState.IsKeyDown(Keys.Enter))
+            {
+                _currentState = GameState.Playing;
+            }
+        }
+        else if (_currentState == GameState.Playing)
+        {
+            _player.Update(gameTime, _collisionManager);
 
             if (IsGhostsFrozen)
             {
                 _freezeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            var currentGhosts = _entityManager.GetEntities<Ghost>(); // оновлення для привідів
+            var currentGhosts = _entityManager.GetEntities<Ghost>(); 
             foreach (Ghost ghost in currentGhosts)
             {
                 if (!IsGhostsFrozen)
@@ -169,20 +191,18 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
             }
 
-            // Виклик менеджера колізій (тут була купаа старих циклів for)
             bool hitByGhost = _collisionManager.UpdateGameplayCollisions(_player, ref _score, ref _freezeTimer);
             if (hitByGhost)
             {
                 _currentState = GameState.GameOver;
             }
 
-            // Перевірка перемоги LINQ Any()
             if (!_entityManager.GetEntities<Pellet>().Any() && !_entityManager.GetEntities<PowerPellet>().Any())
             {
                 _currentState = GameState.Victory;
             }
         }
-        else
+        else 
         {
             if (keyboardState.IsKeyDown(Keys.Enter))
             {
@@ -197,15 +217,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         GraphicsDevice.Clear(ColorPalette.Background);
         _spriteBatch.Begin();
+        
         _entityManager.Draw(_spriteBatch);
 
         if (IsGhostsFrozen)
         {
-            Texture2D freezeOverlay = new Texture2D(GraphicsDevice, 1, 1);
-            freezeOverlay.SetData(new[] { new Color(0, 150, 255, 100) });
             foreach (Ghost ghost in _entityManager.GetEntities<Ghost>())
             {
-                _spriteBatch.Draw(freezeOverlay, ghost.Bounds, Color.White);
+                _spriteBatch.Draw(_pixel, ghost.Bounds, new Color(0, 150, 255, 100));
             }
         }
 
@@ -225,7 +244,32 @@ public class Game1 : Microsoft.Xna.Framework.Game
             }
         }
 
-        if (_currentState == GameState.GameOver)
+        // --- ВІДОБРАЖЕННЯ СТАРТОВОГО МЕНЮ ---
+        if (_currentState == GameState.StartMenu)
+        {
+            _spriteBatch.Draw(_dimTexture, new Rectangle(0, 0, 904, 704), Color.White);
+
+            if (_gameFont != null)
+            {
+                // Ефект плавної неонової зміни кольору (дихання кнопки)
+                float colorPulse = (float)(Math.Sin(gameTime.TotalGameTime.TotalSeconds * 4) + 1.0) / 2.0f;
+                Color neonColor = Color.Lerp(ColorPalette.Lavender, ColorPalette.NeonPink, colorPulse);
+
+                // Заливка тіла кнопки темнішим кольором
+                _spriteBatch.Draw(_pixel, _playButtonRect, new Color(20, 20, 40, 245));
+
+                // Малюємо рамку кнопки
+                DrawBorder(_playButtonRect, 3, neonColor);
+
+                // Напис "PLAY" чітко по центру кнопки
+                _spriteBatch.DrawString(_gameFont, "PLAY", new Vector2(332, 322), neonColor);
+
+                // Інформація про автора під кнопкою (відцентрована по горизонталі)
+                string authorText = "Arcade2D made by Anastasiia Tsyban";
+                _spriteBatch.DrawString(_gameFont, authorText, new Vector2(160, 480), ColorPalette.Lavender * 0.8f);
+            }
+        }
+        else if (_currentState == GameState.GameOver)
         {
             _spriteBatch.Draw(_dimTexture, new Rectangle(0, 0, 904, 704), Color.White);
             if (_gameFont != null)
@@ -246,5 +290,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _spriteBatch.End();
         base.Draw(gameTime);
+    }
+
+    private void DrawBorder(Rectangle rectangle, int thickness, Color color)
+    {
+        _spriteBatch.Draw(_pixel, new Rectangle(rectangle.X, rectangle.Y, rectangle.Width, thickness), color);
+        _spriteBatch.Draw(_pixel, new Rectangle(rectangle.X, rectangle.Y, thickness, rectangle.Height), color);
+        _spriteBatch.Draw(_pixel, new Rectangle(rectangle.X, rectangle.Y + rectangle.Height - thickness, rectangle.Width, thickness), color);
+        _spriteBatch.Draw(_pixel, new Rectangle(rectangle.X + rectangle.Width - thickness, rectangle.Y, thickness, rectangle.Height), color);
     }
 }

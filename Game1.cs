@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks; // це для async 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -28,16 +29,19 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private SpriteFont _gameFont;
 
     private int _score;
+    private int _highScore = 0; // це для збереження найкращого результату
     private Texture2D _dimTexture;
 
     private float _freezeTimer = 0f;
     private bool IsGhostsFrozen => _freezeTimer > 0f;
 
-    private float _playerSpeedTimer = 0f;     // Таймер для відліку дії прискорення гравця
+    private float _playerSpeedTimer = 0f;
     private bool IsPlayerSpedUp => _playerSpeedTimer > 0f;
 
     private readonly Vector2 _mapOffset = new Vector2(16, 16);
     private readonly Rectangle _playButtonRect = new Rectangle(230, 300, 260, 70);
+
+    private readonly string _highScoreFilename = "highscore.txt"; 
 
     public Game1()
     {
@@ -70,7 +74,46 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _dimTexture = new Texture2D(GraphicsDevice, 1, 1);
         _dimTexture.SetData(new[] { new Color(15, 15, 30, 215) }); 
 
+        // завантажуємо рекорд з диска при старті програми
+        LoadHighScore();
+
         RestartGame();
+    }
+
+    // синхонне читання, виконується 1 раз при старті, тому не шкодить грі
+    private void LoadHighScore()
+    {
+        try
+        {
+            if (File.Exists(_highScoreFilename))
+            {
+                string content = File.ReadAllText(_highScoreFilename);
+                if (int.TryParse(content, out int savedScore))
+                {
+                    _highScore = savedScore;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            _highScore = 0; // на випадок, якщо файл пошкоджений, просто скидаємо в 0
+        }
+    }
+
+    // асинхронний записпрацює у фоновому потоці, екран гри не зависає
+    private async Task SaveHighScoreAsync(int score)
+    {
+        await Task.Run(async () =>
+        {
+            try
+            {
+                await File.WriteAllTextAsync(_highScoreFilename, score.ToString());
+            }
+            catch (Exception)
+            {
+                // Запобігає вильоту гри, якщо виникли проблеми з правами доступу до диску
+            }
+        });
     }
 
     private void RestartGame()
@@ -143,13 +186,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
                 else if (map[row, col] == 0)
                 {
-                    bool isPowerPellet = (row == 1 && col == 1) ||   
-                                         (row == 1 && col == 19) ||  
-                                         (row == 19 && col == 1) ||  
-                                         (row == 19 && col == 19);   
-
-                    bool isSpeedPellet = (row == 9 && col == 1) || 
-                                         (row == 9 && col == 19);
+                    bool isPowerPellet = (row == 1 && col == 1) || (row == 1 && col == 19) || (row == 19 && col == 1) || (row == 19 && col == 19);
+                    bool isSpeedPellet = (row == 9 && col == 1) || (row == 9 && col == 19);
 
                     if (isPowerPellet)
                     {
@@ -188,7 +226,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
         else if (_currentState == GameState.Playing)
         {
-            // Зміна швидкості гравця залежно від таймера прискорення
             if (IsPlayerSpedUp)
             {
                 _player.Speed = 320f;
@@ -215,19 +252,36 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
             }
 
-            // Передаємо таймери замороження та швидкості у менеджер колізій
             bool hitByGhost = _collisionManager.UpdateGameplayCollisions(_player, ref _score, ref _freezeTimer, ref _playerSpeedTimer);
+            
+            // це на випадок якщо поточний рахунок обігнав рекорд то підтягуємо його динамічно прямо в процесі гри
+            if (_score > _highScore)
+            {
+                _highScore = _score;
+            }
+
             if (hitByGhost)
             {
                 _currentState = GameState.GameOver;
+
+                // Якщо побили або зрівняли рекорд — асинхронно зберігаємо фоновим потоком
+                if (_score >= _highScore)
+                {
+                    _ = SaveHighScoreAsync(_highScore);
+                }
             }
 
-            // Перемога настає тоді, коли зібрано абсолютно всі види пелетів
             if (!_entityManager.GetEntities<Pellet>().Any() && 
                 !_entityManager.GetEntities<PowerPellet>().Any() && 
                 !_entityManager.GetEntities<SpeedPellet>().Any())
             {
                 _currentState = GameState.Victory;
+
+                // Асинхронне збереження рекорду у разі тріумфальної перемоги
+                if (_score >= _highScore)
+                {
+                    _ = SaveHighScoreAsync(_highScore);
+                }
             }
         }
         else 
@@ -262,23 +316,24 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch.DrawString(_gameFont, "----------", new Vector2(710, 55), ColorPalette.Lavender);
             _spriteBatch.DrawString(_gameFont, $"SCORE: {_score}", new Vector2(710, 90), ColorPalette.SoftYellow);
             
+            // Відображення найкращого результату
+            _spriteBatch.DrawString(_gameFont, $"BEST:  {_highScore}", new Vector2(710, 125), Color.MediumSeaGreen);
+            
             int totalPelletsLeft = _entityManager.GetEntities<Pellet>().Count + 
                                    _entityManager.GetEntities<PowerPellet>().Count + 
                                    _entityManager.GetEntities<SpeedPellet>().Count;
-            _spriteBatch.DrawString(_gameFont, $"LEFT: {totalPelletsLeft}", new Vector2(710, 130), ColorPalette.Lavender);
+            _spriteBatch.DrawString(_gameFont, $"LEFT: {totalPelletsLeft}", new Vector2(710, 165), ColorPalette.Lavender);
 
-            // Індикатор замороження
             if (IsGhostsFrozen)
             {
-                _spriteBatch.DrawString(_gameFont, "FREEZE:", new Vector2(710, 180), Color.Cyan);
-                _spriteBatch.DrawString(_gameFont, $"{_freezeTimer:F1}s", new Vector2(710, 210), Color.Cyan);
+                _spriteBatch.DrawString(_gameFont, "FREEZE:", new Vector2(710, 215), Color.Cyan);
+                _spriteBatch.DrawString(_gameFont, $"{_freezeTimer:F1}s", new Vector2(710, 245), Color.Cyan);
             }
 
-            // Індикатор прискорення
             if (IsPlayerSpedUp)
             {
-                _spriteBatch.DrawString(_gameFont, "SPEED UP:", new Vector2(710, 260), ColorPalette.Gold);
-                _spriteBatch.DrawString(_gameFont, $"{_playerSpeedTimer:F1}s", new Vector2(710, 290), ColorPalette.Gold);
+                _spriteBatch.DrawString(_gameFont, "SPEED UP:", new Vector2(710, 295), ColorPalette.Gold);
+                _spriteBatch.DrawString(_gameFont, $"{_playerSpeedTimer:F1}s", new Vector2(710, 325), ColorPalette.Gold);
             }
         }
 

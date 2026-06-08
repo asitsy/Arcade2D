@@ -1,0 +1,29 @@
+Asynchroniczność w projektach gier (Monogame)
+Przeczytałam, że w przypadku operacji I/O, takich jak zapisywanie najlepszego wyniku (High Score) do pliku tekstowego czy asynchroniczne ładowanie map, użycie asynchroniczności (async / await) ma ogromny sens. 
+Pozwala to na wykonywanie "ciężkich" zadań w tle, dzięki czemu interfejs gry nie zawiesza się ("nie freeze'uje"), a gracz ma zapewnioną płynną rozgrywkę (zamiast nagłego zacięcia ekranu w momencie zapisu danych).
+Jednak dlaczego nie można, a wręcz nie wolno stosować async wewnątrz głównych metod pętli gry, takich jak Update czy Draw?
+
+Zabójstwo wydajności (FPS Drop): 
+Metody Update i Draw wywołują się 60 razy na sekundę. Uruchomienie tam asynchronicznego zadania generowałoby setki nowych wątków w tle co sekundę. 
+Doprowadziłoby to do natychmiastowych lagów i przeciążenia pamięci (Garbage Collector bez przerwy musiałby czyścić te śmieci).
+Problem z synchronizacją stanu gry: 
+Logika ruchu gracza, AI duchów czy sprawdzanie kolizji muszą dziać się "tu i teraz" (synchronicznie). Gdybyśmy sprawdzali kolizje asynchronicznie, zanim wątek boczny skończyłby obliczenia, gracz zdążyłby już przejść przez ścianę.
+
+Podsumowanie: 
+Cała fizyka, renderowanie i mechanika gry muszą pozostać ściśle synchroniczne. 
+Z kolei async/await zostawiamy wyłącznie dla operacji zewnętrznych, które uruchamiamy raz na jakiś czas (tzw. mechanizm Fire-and-Forget), jak zapis na dysk w momencie GameOver.
+
+Ще трохи про роботу, на випадок, якщо заплутаюсь:
+private async Task SaveHighScoreAsync(int score)
+async — це маркер для компілятора. Він каже: "Увага, всередині цього методу буде операція, яку не потрібно чекати прямо зараз, вона може виконуватися у фоні".
+Task (замість звичного void) — це об'єкт-обіцянка (задача). Метод повертає не готовий результат, а «повідомлення» про те, що задача запущена і колись буде завершена.
+
+Всередині методу ми бачимо ось таке вот:
+await Task.Run(async () => { ... });
+Тут відбувається найважливіша магія. Task.Run бере шматок коду всередині фігурних дужок і спеціально викидає його з головного потоку гри (в якому крутиться графічний цикл Update/Draw) у додатковий, фоновий потік процесора (так званий Thread Pool).
+Поки фоновий потік займається файлом, головний потік гри вільний — екран не фризиться, гра продовжує видавати стабільні 60 FPS.
+
+У методі Update, коли гравець програє, ми викликаємо наш метод так:
+_ = SaveHighScoreAsync(_highScore);
+Зверни увагу: ми НЕ написали await SaveHighScoreAsync(...) прямо в методі Update. Чому? Бо якби ми написали await, то сам метод Update став би асинхронним, і гра застигла б у чеканні, поки запишеться файл.
+Замість цього конструкція _ = (дискард / пуста змінна) каже компілятору C#: "Я знаю, що цей метод асинхронний і повертає Task. Мені плювати, коли саме він завершиться. Просто запусти його у фоні, а я миттєво йду далі малювати екран Game Over!".

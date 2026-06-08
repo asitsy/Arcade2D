@@ -32,9 +32,9 @@
 - [x] CollisionManager,
 - [х] EntityManager,
 - [х] map loading system,
-- [ ] state management,
+- [x] state management,
 - [ ] async systems,
-- [ ] LINQ usage in entity systems.
+- [x] LINQ usage in entity systems.
 
 ---
 
@@ -47,7 +47,7 @@
 - [х] score UI,
 - [ ] sound effects,
 - [ ] background music
-- [ ] chce jeszcze dodać timer gry obok planszy oraz liczniki czasu dla power pelletów (zamrożenie ghosts, zwiększona prędkość gracza).
+- [x] chce jeszcze dodać timer gry obok planszy oraz liczniki czasu dla power pelletów (zamrożenie ghosts, zwiększona prędkość gracza).
 
 ---
 

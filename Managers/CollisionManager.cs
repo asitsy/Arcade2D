@@ -14,15 +14,13 @@ public class CollisionManager
         _entityManager = entityManager ?? throw new ArgumentNullException(nameof(entityManager));
     }
 
-    public bool CheckWallCollision(Rectangle bounds) // тут LINQ перевіряє, чи перетинається переданий прямокутник із будь-якою стіною
+    public bool CheckWallCollision(Rectangle bounds) 
     {
         return _entityManager.GetEntities<Wall>().Any(wall => bounds.Intersects(wall.Bounds));
     }
 
-    // Централізована обробка ігрових зіткнень гравця з об'єктами
-    public bool UpdateGameplayCollisions(Player player, ref int score, ref float freezeTimer)
+    public bool UpdateGameplayCollisions(Player player, ref int score, ref float freezeTimer, ref float speedTimer)
     {
-        // Зіткнення з привидами (якщо вони не заморожені)
         if (freezeTimer <= 0f)
         {
             if (_entityManager.GetEntities<Ghost>().Any(ghost => player.Bounds.Intersects(ghost.Bounds)))
@@ -31,8 +29,6 @@ public class CollisionManager
             }
         }
 
-        // Збір супер-пелетів (PowerPellet) тепер ПЕРШИМ!
-        // Шукаємо тільки об'єкти, які є строго PowerPellet
         var collidedPowerPellet = _entityManager.GetEntities<PowerPellet>()
             .FirstOrDefault(p => player.Bounds.Intersects(p.Bounds));
             
@@ -41,19 +37,30 @@ public class CollisionManager
             _entityManager.DestroyEntity(collidedPowerPellet);
             score += 10;
             freezeTimer = 5f; 
-            return false; // Повертаємось, щоб не обробляти його як звичайний пелет
+            return false; 
         }
 
-        // Збір звичайних пелетів (Pellet) за допомогою LINQ
-        // Фільтруємо через .Where, щоб випадково не зачепити PowerPellet, які успадковані від Pellet
+        var collidedSpeedPellet = _entityManager.GetEntities<SpeedPellet>()
+            .FirstOrDefault(p => player.Bounds.Intersects(p.Bounds));
+
+        if (collidedSpeedPellet != null)
+        {
+            _entityManager.DestroyEntity(collidedSpeedPellet);
+            score += 15;      // За унікальний бонус дамо трохи більше балів
+            speedTimer = 5f;  // 5 секунд підвищеної швидкості
+            return false;
+        }
+
+        // Збір звичайних пелетів (Pellet)
+        // Фільтруємо, щоб випадково не з'їсти PowerPellet або SpeedPellet як звичайну точку
         var collidedPellet = _entityManager.GetEntities<Pellet>()
-            .Where(p => p is not PowerPellet) 
+            .Where(p => p is not PowerPellet && p is not SpeedPellet) 
             .FirstOrDefault(p => player.Bounds.Intersects(p.Bounds));
             
         if (collidedPellet != null)
         {
             _entityManager.DestroyEntity(collidedPellet);
-            score++;
+            score += 1;
         }
 
         return false;

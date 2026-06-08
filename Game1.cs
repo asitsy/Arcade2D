@@ -10,7 +10,6 @@ using Arcade2D.Entities;
 using Arcade2D.Utils;
 using Arcade2D.Managers;
 
-// Щоб уникнути конфліктів імен типів
 using XnaInput = Microsoft.Xna.Framework.Input;
 
 namespace Arcade2D;
@@ -34,9 +33,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private float _freezeTimer = 0f;
     private bool IsGhostsFrozen => _freezeTimer > 0f;
 
-    private readonly Vector2 _mapOffset = new Vector2(16, 16);
+    private float _playerSpeedTimer = 0f;     // Таймер для відліку дії прискорення гравця
+    private bool IsPlayerSpedUp => _playerSpeedTimer > 0f;
 
-    // Прямокутник кнопки PLAY по центру ігрової зони лабіринту
+    private readonly Vector2 _mapOffset = new Vector2(16, 16);
     private readonly Rectangle _playButtonRect = new Rectangle(230, 300, 260, 70);
 
     public Game1()
@@ -45,15 +45,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _graphics.PreferredBackBufferWidth = 904;
         _graphics.PreferredBackBufferHeight = 704;
         Content.RootDirectory = "Content";
-        IsMouseVisible = true; // Курсор миші тепер видно
+        IsMouseVisible = true; 
     }
 
     protected override void LoadContent()
     {
-        // ПОМИЛКУ ВИПРАВЛЕНО ТУТ: тепер вираз чистий і коректний
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _entityManager = new EntityManager();
-        _collisionManager = new CollisionManager(_entityManager);
+        _collisionManager = new CollisionManager(_entityManager); 
 
         string fontPath = @"/System/Library/Fonts/Supplemental/Courier New.ttf"; 
         if (!File.Exists(fontPath)) fontPath = @"/System/Library/Fonts/Supplemental/Arial.ttf";
@@ -69,7 +68,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _pixel.SetData(new[] { Color.White }); 
 
         _dimTexture = new Texture2D(GraphicsDevice, 1, 1);
-        _dimTexture.SetData(new[] { new Color(15, 15, 30, 215) }); // Глибокий стильний темно-синій колір затінення
+        _dimTexture.SetData(new[] { new Color(15, 15, 30, 215) }); 
 
         RestartGame();
     }
@@ -78,6 +77,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         _score = 0;
         _freezeTimer = 0f;
+        _playerSpeedTimer = 0f; 
         _currentState = GameState.StartMenu; 
         _entityManager.Clear();
 
@@ -89,6 +89,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         Texture2D powerPelletTexture = new Texture2D(GraphicsDevice, 1, 1);
         powerPelletTexture.SetData(new[] { ColorPalette.NeonPink });
+
+        Texture2D speedPelletTexture = new Texture2D(GraphicsDevice, 1, 1);
+        speedPelletTexture.SetData(new[] { ColorPalette.Gold });
 
         Texture2D ghostTexture = new Texture2D(GraphicsDevice, 1, 1);
         ghostTexture.SetData(new[] { ColorPalette.NeonPink });
@@ -140,10 +143,21 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
                 else if (map[row, col] == 0)
                 {
-                    bool isPowerPellet = (row == 1 && col == 1) || (row == 3 && col == 12) || (row == 19 && col == 1) || (row == 16 && col == 19);
+                    bool isPowerPellet = (row == 1 && col == 1) ||   
+                                         (row == 1 && col == 19) ||  
+                                         (row == 19 && col == 1) ||  
+                                         (row == 19 && col == 19);   
+
+                    bool isSpeedPellet = (row == 9 && col == 1) || 
+                                         (row == 9 && col == 19);
+
                     if (isPowerPellet)
                     {
                         _entityManager.Add(new PowerPellet(pos + new Vector2(8, 8), powerPelletTexture));
+                    }
+                    else if (isSpeedPellet)
+                    {
+                        _entityManager.Add(new SpeedPellet(pos + new Vector2(8, 8), speedPelletTexture));
                     }
                     else if ((row + col) % 2 == 0)
                     {
@@ -164,7 +178,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_currentState == GameState.StartMenu)
         {
-            // Перевіряємо клік лівою кнопкою миші всередині меж кнопки PLAY
             bool isMousePressed = mouseState.LeftButton == XnaInput.ButtonState.Pressed;
             bool isCursorOverButton = _playButtonRect.Contains(mouseState.X, mouseState.Y);
 
@@ -175,6 +188,17 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
         else if (_currentState == GameState.Playing)
         {
+            // Зміна швидкості гравця залежно від таймера прискорення
+            if (IsPlayerSpedUp)
+            {
+                _player.Speed = 320f;
+                _playerSpeedTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+            else
+            {
+                _player.Speed = 200f;
+            }
+
             _player.Update(gameTime, _collisionManager);
 
             if (IsGhostsFrozen)
@@ -191,13 +215,17 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 }
             }
 
-            bool hitByGhost = _collisionManager.UpdateGameplayCollisions(_player, ref _score, ref _freezeTimer);
+            // Передаємо таймери замороження та швидкості у менеджер колізій
+            bool hitByGhost = _collisionManager.UpdateGameplayCollisions(_player, ref _score, ref _freezeTimer, ref _playerSpeedTimer);
             if (hitByGhost)
             {
                 _currentState = GameState.GameOver;
             }
 
-            if (!_entityManager.GetEntities<Pellet>().Any() && !_entityManager.GetEntities<PowerPellet>().Any())
+            // Перемога настає тоді, коли зібрано абсолютно всі види пелетів
+            if (!_entityManager.GetEntities<Pellet>().Any() && 
+                !_entityManager.GetEntities<PowerPellet>().Any() && 
+                !_entityManager.GetEntities<SpeedPellet>().Any())
             {
                 _currentState = GameState.Victory;
             }
@@ -234,37 +262,39 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch.DrawString(_gameFont, "----------", new Vector2(710, 55), ColorPalette.Lavender);
             _spriteBatch.DrawString(_gameFont, $"SCORE: {_score}", new Vector2(710, 90), ColorPalette.SoftYellow);
             
-            int totalPelletsLeft = _entityManager.GetEntities<Pellet>().Count + _entityManager.GetEntities<PowerPellet>().Count;
+            int totalPelletsLeft = _entityManager.GetEntities<Pellet>().Count + 
+                                   _entityManager.GetEntities<PowerPellet>().Count + 
+                                   _entityManager.GetEntities<SpeedPellet>().Count;
             _spriteBatch.DrawString(_gameFont, $"LEFT: {totalPelletsLeft}", new Vector2(710, 130), ColorPalette.Lavender);
 
+            // Індикатор замороження
             if (IsGhostsFrozen)
             {
                 _spriteBatch.DrawString(_gameFont, "FREEZE:", new Vector2(710, 180), Color.Cyan);
                 _spriteBatch.DrawString(_gameFont, $"{_freezeTimer:F1}s", new Vector2(710, 210), Color.Cyan);
             }
+
+            // Індикатор прискорення
+            if (IsPlayerSpedUp)
+            {
+                _spriteBatch.DrawString(_gameFont, "SPEED UP:", new Vector2(710, 260), ColorPalette.Gold);
+                _spriteBatch.DrawString(_gameFont, $"{_playerSpeedTimer:F1}s", new Vector2(710, 290), ColorPalette.Gold);
+            }
         }
 
-        // --- ВІДОБРАЖЕННЯ СТАРТОВОГО МЕНЮ ---
         if (_currentState == GameState.StartMenu)
         {
             _spriteBatch.Draw(_dimTexture, new Rectangle(0, 0, 904, 704), Color.White);
 
             if (_gameFont != null)
             {
-                // Ефект плавної неонової зміни кольору (дихання кнопки)
                 float colorPulse = (float)(Math.Sin(gameTime.TotalGameTime.TotalSeconds * 4) + 1.0) / 2.0f;
                 Color neonColor = Color.Lerp(ColorPalette.Lavender, ColorPalette.NeonPink, colorPulse);
 
-                // Заливка тіла кнопки темнішим кольором
                 _spriteBatch.Draw(_pixel, _playButtonRect, new Color(20, 20, 40, 245));
-
-                // Малюємо рамку кнопки
                 DrawBorder(_playButtonRect, 3, neonColor);
-
-                // Напис "PLAY" чітко по центру кнопки
                 _spriteBatch.DrawString(_gameFont, "PLAY", new Vector2(332, 322), neonColor);
 
-                // Інформація про автора під кнопкою (відцентрована по горизонталі)
                 string authorText = "Arcade2D made by Anastasiia Tsyban";
                 _spriteBatch.DrawString(_gameFont, authorText, new Vector2(160, 480), ColorPalette.Lavender * 0.8f);
             }

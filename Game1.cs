@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks; // це для async 
+using System.Threading.Tasks; // Додано для асинхронної роботи (Task)
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -29,19 +29,19 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private SpriteFont _gameFont;
 
     private int _score;
-    private int _highScore = 0; // це для збереження найкращого результату
+    private int _highScore = 0; // Для збереження найкращого результату
     private Texture2D _dimTexture;
 
     private float _freezeTimer = 0f;
     private bool IsGhostsFrozen => _freezeTimer > 0f;
 
-    private float _playerSpeedTimer = 0f;
+    private float _playerSpeedTimer = 0f; 
     private bool IsPlayerSpedUp => _playerSpeedTimer > 0f;
 
     private readonly Vector2 _mapOffset = new Vector2(16, 16);
     private readonly Rectangle _playButtonRect = new Rectangle(230, 300, 260, 70);
 
-    private readonly string _highScoreFilename = "highscore.txt"; 
+    private readonly string _highScoreFilename = "highscore.txt"; // Назва файлу рекорду
 
     public Game1()
     {
@@ -74,13 +74,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _dimTexture = new Texture2D(GraphicsDevice, 1, 1);
         _dimTexture.SetData(new[] { new Color(15, 15, 30, 215) }); 
 
-        // завантажуємо рекорд з диска при старті програми
+        // Зчитуємо локальний рекорд з диска при старті гри
         LoadHighScore();
 
         RestartGame();
     }
 
-    // синхонне читання, виконується 1 раз при старті, тому не шкодить грі
+    // Синхронне читання: виконується одноразово при запуску, тому не шкодить FPS
     private void LoadHighScore()
     {
         try
@@ -96,11 +96,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
         catch (Exception)
         {
-            _highScore = 0; // на випадок, якщо файл пошкоджений, просто скидаємо в 0
+            _highScore = 0;
         }
     }
 
-    // асинхронний записпрацює у фоновому потоці, екран гри не зависає
+    // Асинхронний запис: виконується у фоновому потоці, захищаючи гру від фризів
     private async Task SaveHighScoreAsync(int score)
     {
         await Task.Run(async () =>
@@ -111,7 +111,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             }
             catch (Exception)
             {
-                // Запобігає вильоту гри, якщо виникли проблеми з правами доступу до диску
+                // Ігноруємо помилки запису, щоб гра не падала через обмеження прав доступу до диска
             }
         });
     }
@@ -128,7 +128,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         wallTexture.SetData(new[] { ColorPalette.Lavender });
 
         Texture2D pelletTexture = new Texture2D(GraphicsDevice, 1, 1);
-        pelletTexture.SetData(new[] { ColorPalette.SoftYellow });
+         pelletTexture.SetData(new[] { ColorPalette.SoftYellow });
 
         Texture2D powerPelletTexture = new Texture2D(GraphicsDevice, 1, 1);
         powerPelletTexture.SetData(new[] { ColorPalette.NeonPink });
@@ -149,42 +149,39 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _entityManager.Add(new Ghost(new Vector2(32 * 1, 32 * 19) + _mapOffset, ghostTexture));
         _entityManager.Add(new Ghost(new Vector2(32 * 19, 32 * 19) + _mapOffset, ghostTexture));
 
-        int[,] map =
+        // Зчитування мапи з файлу Content/level1.txt
+        string mapFilePath = Path.Combine(Content.RootDirectory, "level1.txt");
+        List<string> mapLines = new List<string>();
+
+        if (File.Exists(mapFilePath))
         {
-            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-            {1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1},
-            {1,0,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,1},
-            {1,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,0,1},
-            {1,0,1,0,1,1,1,1,0,1,0,1,0,1,1,1,1,0,1,0,1},
-            {1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1},
-            {1,1,1,0,1,0,1,1,1,1,0,1,1,1,0,1,0,1,1,0,1},
-            {1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,1},
-            {1,0,1,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1},
-            {1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1},
-            {1,1,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,1,1,1},
-            {1,0,0,0,1,0,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1},
-            {1,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,1,1,0,1},
-            {1,0,1,0,0,0,1,1,1,1,0,1,1,1,1,0,0,0,1,0,1},
-            {1,0,1,1,1,0,1,0,0,0,0,0,0,1,0,0,1,0,1,0,1},
-            {1,0,0,0,0,0,1,0,1,1,1,1,0,1,0,1,1,0,0,0,1},
-            {1,0,1,1,1,0,0,0,1,0,0,1,0,0,0,0,1,0,1,0,1},
-            {1,0,1,0,0,0,1,0,1,0,0,1,1,1,1,0,1,0,1,0,1},
-            {1,0,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1},
-            {1,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1,1,0,0,0,1},
-            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
-        };
+            mapLines = File.ReadAllLines(mapFilePath).Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
+        }
+        else
+        {
+            // Запасна заглушка лабіринту, якщо текстовий файл не знайдено
+            mapLines = new List<string>
+            {
+                "111111111111111111111",
+                "100000000000000000001",
+                "111111111111111111111"
+            };
+        }
 
         int tileSize = 32;
-        for (int row = 0; row < map.GetLength(0); row++)
+        for (int row = 0; row < mapLines.Count; row++)
         {
-            for (int col = 0; col < map.GetLength(1); col++)
+            string currentLine = mapLines[row];
+            for (int col = 0; col < currentLine.Length; col++)
             {
                 Vector2 pos = new Vector2(col * tileSize, row * tileSize) + _mapOffset;
-                if (map[row, col] == 1)
+                char tileChar = currentLine[col];
+
+                if (tileChar == '1')
                 {
                     _entityManager.Add(new Wall(pos, wallTexture));
                 }
-                else if (map[row, col] == 0)
+                else if (tileChar == '0')
                 {
                     bool isPowerPellet = (row == 1 && col == 1) || (row == 1 && col == 19) || (row == 19 && col == 1) || (row == 19 && col == 19);
                     bool isSpeedPellet = (row == 9 && col == 1) || (row == 9 && col == 19);
@@ -254,7 +251,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
             bool hitByGhost = _collisionManager.UpdateGameplayCollisions(_player, ref _score, ref _freezeTimer, ref _playerSpeedTimer);
             
-            // це на випадок якщо поточний рахунок обігнав рекорд то підтягуємо його динамічно прямо в процесі гри
+            // Якщо поточний рахунок перевершив рекорд — динамічно оновлюємо показник на екрані
             if (_score > _highScore)
             {
                 _highScore = _score;
@@ -264,7 +261,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             {
                 _currentState = GameState.GameOver;
 
-                // Якщо побили або зрівняли рекорд — асинхронно зберігаємо фоновим потоком
+                // Запуск асинхронного збереження рекорду (Fire-and-Forget)
                 if (_score >= _highScore)
                 {
                     _ = SaveHighScoreAsync(_highScore);
@@ -277,7 +274,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             {
                 _currentState = GameState.Victory;
 
-                // Асинхронне збереження рекорду у разі тріумфальної перемоги
+                // Запуск асинхронного збереження рекорду при перемозі
                 if (_score >= _highScore)
                 {
                     _ = SaveHighScoreAsync(_highScore);
@@ -316,7 +313,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch.DrawString(_gameFont, "----------", new Vector2(710, 55), ColorPalette.Lavender);
             _spriteBatch.DrawString(_gameFont, $"SCORE: {_score}", new Vector2(710, 90), ColorPalette.SoftYellow);
             
-            // Відображення найкращого результату
+            // Відображення рекорду в UI бічної панелі
             _spriteBatch.DrawString(_gameFont, $"BEST:  {_highScore}", new Vector2(710, 125), Color.MediumSeaGreen);
             
             int totalPelletsLeft = _entityManager.GetEntities<Pellet>().Count + 

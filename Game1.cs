@@ -29,7 +29,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private SpriteFont _gameFont;
 
     private int _score;
-    private int _highScore = 0; // Для збереження найкращого результату
+    private int _lastScore = 0; // тепер тут зберігається саме останній результат
     private Texture2D _dimTexture;
 
     private float _freezeTimer = 0f;
@@ -41,7 +41,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private readonly Vector2 _mapOffset = new Vector2(16, 16);
     private readonly Rectangle _playButtonRect = new Rectangle(230, 300, 260, 70);
 
-    private readonly string _highScoreFilename = "highscore.txt"; // Назва файлу рекорду
+    private readonly string _lastScoreFilename = "highscore.txt"; // Ім'я файлу залишаємо тим самим, щоб не ламати налаштування
 
     public Game1()
     {
@@ -74,44 +74,43 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _dimTexture = new Texture2D(GraphicsDevice, 1, 1);
         _dimTexture.SetData(new[] { new Color(15, 15, 30, 215) }); 
 
-        // Зчитуємо локальний рекорд з диска при старті гри
-        LoadHighScore();
+        // Завантажуємо результат попередньої гри з диска при старті
+        LoadLastScore();
 
         RestartGame();
     }
 
-    // Синхронне читання: виконується одноразово при запуску, тому не шкодить FPS
-    private void LoadHighScore()
+    private void LoadLastScore()
     {
         try
         {
-            if (File.Exists(_highScoreFilename))
+            if (File.Exists(_lastScoreFilename))
             {
-                string content = File.ReadAllText(_highScoreFilename);
+                string content = File.ReadAllText(_lastScoreFilename);
                 if (int.TryParse(content, out int savedScore))
                 {
-                    _highScore = savedScore;
+                    _lastScore = savedScore;
                 }
             }
         }
         catch (Exception)
         {
-            _highScore = 0;
+            _lastScore = 0;
         }
     }
 
-    // Асинхронний запис: виконується у фоновому потоці, захищаючи гру від фризів
-    private async Task SaveHighScoreAsync(int score)
+    // Асинхронний запис зберігає поточний результат у фоновому потоці
+    private async Task SaveLastScoreAsync(int score)
     {
         await Task.Run(async () =>
         {
             try
             {
-                await File.WriteAllTextAsync(_highScoreFilename, score.ToString());
+                await File.WriteAllTextAsync(_lastScoreFilename, score.ToString());
             }
             catch (Exception)
             {
-                // Ігноруємо помилки запису, щоб гра не падала через обмеження прав доступу до диска
+                // Захист від вилітання програми
             }
         });
     }
@@ -128,7 +127,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         wallTexture.SetData(new[] { ColorPalette.Lavender });
 
         Texture2D pelletTexture = new Texture2D(GraphicsDevice, 1, 1);
-         pelletTexture.SetData(new[] { ColorPalette.SoftYellow });
+        pelletTexture.SetData(new[] { ColorPalette.SoftYellow });
 
         Texture2D powerPelletTexture = new Texture2D(GraphicsDevice, 1, 1);
         powerPelletTexture.SetData(new[] { ColorPalette.NeonPink });
@@ -159,7 +158,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
         else
         {
-            // Запасна заглушка лабіринту, якщо текстовий файл не знайдено
             mapLines = new List<string>
             {
                 "111111111111111111111",
@@ -251,21 +249,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
             bool hitByGhost = _collisionManager.UpdateGameplayCollisions(_player, ref _score, ref _freezeTimer, ref _playerSpeedTimer);
             
-            // Якщо поточний рахунок перевершив рекорд — динамічно оновлюємо показник на екрані
-            if (_score > _highScore)
-            {
-                _highScore = _score;
-            }
-
             if (hitByGhost)
             {
                 _currentState = GameState.GameOver;
 
-                // Запуск асинхронного збереження рекорду (Fire-and-Forget)
-                if (_score >= _highScore)
-                {
-                    _ = SaveHighScoreAsync(_highScore);
-                }
+                // SUPERR WAZNE
+                _lastScore = _score;                 // Записуємо поточний рахунок у файл та оновлюємо змінну _lastScore БЕЗ перевірки на рекорд
+                _ = SaveLastScoreAsync(_score);
             }
 
             if (!_entityManager.GetEntities<Pellet>().Any() && 
@@ -274,11 +264,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
             {
                 _currentState = GameState.Victory;
 
-                // Запуск асинхронного збереження рекорду при перемозі
-                if (_score >= _highScore)
-                {
-                    _ = SaveHighScoreAsync(_highScore);
-                }
+                _lastScore = _score;                 // Записуємо поточний рахунок у разі перемоги БЕЗ перевірки на максимум
+                _ = SaveLastScoreAsync(_score);
             }
         }
         else 
@@ -312,9 +299,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch.DrawString(_gameFont, "ARCADE 2D", new Vector2(710, 30), Color.White);
             _spriteBatch.DrawString(_gameFont, "----------", new Vector2(710, 55), ColorPalette.Lavender);
             _spriteBatch.DrawString(_gameFont, $"SCORE: {_score}", new Vector2(710, 90), ColorPalette.SoftYellow);
-            
-            // Відображення рекорду в UI бічної панелі
-            _spriteBatch.DrawString(_gameFont, $"BEST:  {_highScore}", new Vector2(710, 125), Color.MediumSeaGreen);
+
+            _spriteBatch.DrawString(_gameFont, $"LAST:  {_lastScore}", new Vector2(710, 125), Color.MediumSeaGreen);
             
             int totalPelletsLeft = _entityManager.GetEntities<Pellet>().Count + 
                                    _entityManager.GetEntities<PowerPellet>().Count + 

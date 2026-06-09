@@ -9,7 +9,7 @@ using SpriteFontPlus;
 using Arcade2D.Entities;
 using Arcade2D.Utils;
 using Arcade2D.Managers;
-using Arcade2D.States; // Додано для підтримки нових станів гри
+using Arcade2D.States; 
 
 namespace Arcade2D;
 
@@ -18,15 +18,17 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
 
-    public Player PlayerInstance { get; private set; }  // (Properties): щоб стани мали повний доступ до менеджерів та сутностей
+    public Player PlayerInstance { get; private set; }  
     public EntityManager EntityManagerInstance { get; private set; }
     public CollisionManager CollisionManagerInstance { get; private set; }
 
-    public Texture2D PixelTexture { get; private set; }     // Графічні ресурси, доступні для малювання всередині класів States
+    public Texture2D PixelTexture { get; private set; }     
     public Texture2D DimTexture { get; private set; }
     public SpriteFont GameFont { get; private set; }
+    
+    // ДОДАНО: Сховище для нашого нового оригінального спрайтшиту
+    public Texture2D SpriteSheet { get; private set; }
 
-    // Ігрові показники та таймери
     public int Score;
     public int LastScore = 0;
     public float FreezeTimer = 0f;
@@ -38,7 +40,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private readonly Vector2 _mapOffset = new Vector2(16, 16);
     private readonly string _lastScoreFilename = "highscore.txt";
 
-    //  Поточний активний стан та екземпляри всіх екранів
     private State _currentState;
     public MenuState MenuStateInstance { get; private set; }
     public GameplayState GameplayStateInstance { get; private set; }
@@ -76,10 +77,27 @@ public class Game1 : Microsoft.Xna.Framework.Game
         DimTexture = new Texture2D(GraphicsDevice, 1, 1);
         DimTexture.SetData(new[] { new Color(15, 15, 30, 215) }); 
 
-        // Завантажуємо результат попередньої гри з диска
+        // ДОДАНО: Завантаження файлу та автоматичне очищення чорного фону
+        string sheetPath = Path.Combine(Content.RootDirectory, "spritesheet.png");
+        if (File.Exists(sheetPath))
+        {
+            SpriteSheet = Texture2D.FromFile(GraphicsDevice, sheetPath);
+            Color[] colorData = new Color[SpriteSheet.Width * SpriteSheet.Height];
+            SpriteSheet.GetData(colorData);
+            
+            for (int i = 0; i < colorData.Length; i++)
+            {
+                // Якщо піксель чисто чорний (як фон на Spriters Resource) - робимо його прозорим
+                if (colorData[i].R == 0 && colorData[i].G == 0 && colorData[i].B == 0)
+                {
+                    colorData[i] = Color.Transparent; 
+                }
+            }
+            SpriteSheet.SetData(colorData);
+        }
+
         LoadLastScore();
 
-        // Створюємо об'єкти станів (екранів)
         MenuStateInstance = new MenuState(this, GraphicsDevice);
         GameplayStateInstance = new GameplayState(this, GraphicsDevice);
         GameOverStateInstance = new GameOverState(this, GraphicsDevice);
@@ -87,11 +105,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         RestartGame();
 
-        // Початковий стан при запуску — Головне Меню
         _currentState = MenuStateInstance;
     }
 
-    // Метод для плавного перемикання між екранами
     public void ChangeState(State newState)
     {
         _currentState = newState;
@@ -116,7 +132,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
     }
 
-    // Наш асинхронний фоновий метод запису останнього результату
     public async Task SaveLastScoreAsync(int score)
     {
         await Task.Run(async () =>
@@ -125,10 +140,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             {
                 await File.WriteAllTextAsync(_lastScoreFilename, score.ToString());
             }
-            catch (Exception)
-            {
-                // Запобігання вильоту
-            }
+            catch (Exception) {}
         });
     }
 
@@ -154,17 +166,17 @@ public class Game1 : Microsoft.Xna.Framework.Game
         Texture2D ghostTexture = new Texture2D(GraphicsDevice, 1, 1);
         ghostTexture.SetData(new[] { ColorPalette.NeonPink });
 
-        PlayerInstance = new Player(new Vector2(32 * 10 + 4, 32 * 10 + 4) + _mapOffset, PixelTexture);
-        PlayerInstance.Texture.SetData(new[] { ColorPalette.PlayerPink }); 
+        // Модифіковано: Тепер передаємо Спрайтшит гравцю замість рожевого прямокутника
+        PlayerInstance = new Player(new Vector2(32 * 10 + 4, 32 * 10 + 4) + _mapOffset, SpriteSheet);
 
         EntityManagerInstance.Add(PlayerInstance);
 
-        EntityManagerInstance.Add(new Ghost(new Vector2(32 * 1, 32 * 1) + _mapOffset, ghostTexture));
-        EntityManagerInstance.Add(new Ghost(new Vector2(32 * 19, 32 * 1) + _mapOffset, ghostTexture));
-        EntityManagerInstance.Add(new Ghost(new Vector2(32 * 1, 32 * 19) + _mapOffset, ghostTexture));
-        EntityManagerInstance.Add(new Ghost(new Vector2(32 * 19, 32 * 19) + _mapOffset, ghostTexture));
+        // Модифіковано: Передаємо Спрайтшит усім привидам
+        EntityManagerInstance.Add(new Ghost(new Vector2(32 * 1, 32 * 1) + _mapOffset, SpriteSheet));
+        EntityManagerInstance.Add(new Ghost(new Vector2(32 * 19, 32 * 1) + _mapOffset, SpriteSheet));
+        EntityManagerInstance.Add(new Ghost(new Vector2(32 * 1, 32 * 19) + _mapOffset, SpriteSheet));
+        EntityManagerInstance.Add(new Ghost(new Vector2(32 * 19, 32 * 19) + _mapOffset, SpriteSheet));
 
-        // Динамічне зчитування текстової карти
         string mapFilePath = Path.Combine(Content.RootDirectory, "level1.txt");
         List<string> mapLines = new List<string>();
 
@@ -222,7 +234,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     protected override void Update(GameTime gameTime)
     {
-        // Game1 більше не знає про логіку, він просто оновлює поточний стан
         _currentState?.Update(gameTime);
         base.Update(gameTime);
     }
@@ -230,11 +241,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(ColorPalette.Background);
-        _spriteBatch.Begin();
-        
-        // Game1 просто просить поточний стан намалювати себе
+        _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
         _currentState?.Draw(gameTime, _spriteBatch);
-
         _spriteBatch.End();
         base.Draw(gameTime);
     }

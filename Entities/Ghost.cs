@@ -14,10 +14,10 @@ public class Ghost : Entity
 
     private readonly Vector2[] _directions =
     {
-        new Vector2(0, -1), // Вгору
-        new Vector2(0, 1),  // Вниз
-        new Vector2(-1, 0), // Вліво
-        new Vector2(1, 0)   // Вправо
+        new Vector2(0, -1), 
+        new Vector2(0, 1),  
+        new Vector2(-1, 0), 
+        new Vector2(1, 0)  
     };
 
     private Point _lastTile = new Point(-1, -1);
@@ -31,7 +31,7 @@ public class Ghost : Entity
     // навіть якщо в Game1 або GameplayState забули передати ID кольору.
     private static int _globalGhostCounter = 0;
 
-    // ЗМІНЕНО: значення за замовчуванням встановлено в -1 для увімкнення авто-розподілу
+    // значення за замовчуванням встановлено в -1 для увімкнення авто-розподілу
     public Ghost(Vector2 position, Texture2D texture, int ghostType = -1) : base(position)
     {
         Texture = texture;

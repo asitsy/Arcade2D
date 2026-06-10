@@ -6,18 +6,17 @@ namespace Arcade2D.Managers;
 
 public class ScoreManager
 {
-    // Я змінив назву файлу збереження, щоб старий рекорд (200) скинувся, 
-    // і гра почала записувати історію з чистого аркуша
     private readonly string _lastScoreFilename = "lastscore.txt"; 
     
     public int Score { get; private set; }
-    public int LastScore { get; private set; }
+    
+    public int LastScore { get; private set; } 
 
     public void Reset() => Score = 0;
 
     public void AddScore(int points) => Score += points;
 
-    public void LoadHighScore()
+    public void LoadLastScore()
     {
         if (File.Exists(_lastScoreFilename))
         {
@@ -33,17 +32,18 @@ public class ScoreManager
         }
     }
 
-    public async Task SaveHighScoreAsync()
+    // Рахунок записується у файл ЗАВЖДИ при завершенні гри
+    public async Task SaveLastScoreAsync()
     {
-        // РЕФАКТОРИНГ: Ми ПРИБРАЛИ перевірку if (Score > LastScore).
-        // Тепер, щойно гра закінчується (перемога або програш), 
-        // ваш поточний рахунок гарантовано записується як "Останній рекорд".
-        
-        LastScore = Score;
         try
         {
-            await File.WriteAllTextAsync(_lastScoreFilename, LastScore.ToString());
+            await File.WriteAllTextAsync(_lastScoreFilename, Score.ToString());
         }
         catch (Exception) { }
+    }
+
+    public void UpdateLastScoreInMemory()     // Рахунок поточної гри стає "останнім" для наступного запуску
+    {
+        LastScore = Score;
     }
 }

@@ -83,8 +83,8 @@ Planowane bonusy:
 
 ### Refaktoryzacja
 
-* [ ] wydzielenie zarządzania wynikami do osobnego ScoreManagera,
-* [ ] ograniczenie odpowiedzialności klasy Game1.
+* [x] wydzielenie zarządzania wynikami do osobnego ScoreManagera,
+* [x] ograniczenie odpowiedzialności klasy Game1.
 
 ### Programowanie asynchroniczne
 
@@ -113,7 +113,7 @@ Planowane bonusy:
 
 ### Grafika
 
-* [ ] zastąpienie placeholderów docelowymi sprite'ami,
+* [x] zastąpienie placeholderów docelowymi sprite'ami,
 * [x] sprite gracza,
 * [x] sprite'y duchów,
 * [x] animacje ruchu.
@@ -121,7 +121,7 @@ Planowane bonusy:
 ### Interfejs użytkownika
 
 * [ ] wyświetlanie liczby żyć,
-* [ ] poprawa układu HUD.
+* [x] poprawa układu HUD.
 
 ### Audio (dodam po wszystkich zaplanowanych features)
 

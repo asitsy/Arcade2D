@@ -59,58 +59,51 @@ public class Game1 : Microsoft.Xna.Framework.Game
         PixelTexture.SetData(new[] { Color.White });
 
         DimTexture = new Texture2D(GraphicsDevice, 1, 1);
-        DimTexture.SetData(new[] { new Color(0, 0, 0, 150) });
+        DimTexture.SetData(new[] { Color.Black * 0.65f });
 
-        // --- ЗАВАНТАЖЕННЯ СИСТЕМНОГО ШРИФТУ ДЛЯ MAC / LINUX ---
-        string fontPath = null;
+        string systemFontPath = "";
         
-        string[] systemFontPaths = new[]
+        string[] macFonts = new string[] 
         {
-            "/System/Library/Fonts/Constants/SFCompact.ttf",
-            "/System/Library/Fonts/Supplemental/Courier New.ttf",
-            "/System/Library/Fonts/User/Courier New.ttf",
-            "/System/Library/Fonts/Geneva.ttf",
-            "/Library/Fonts/Arial.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-            "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
-            "/usr/share/fonts/truetype/freefont/FreeMono.ttf"
+            "/System/Library/Fonts/Supplemental/Arial.ttf", // Нові macOS (Catalina+)
+            "/Library/Fonts/Arial.ttf",                     
+            "/System/Library/Fonts/Supplemental/Comic Sans MS.ttf",
+            "/Library/Fonts/Comic Sans MS.ttf",
+            "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
         };
 
-        foreach (var path in systemFontPaths)
+        foreach (string font in macFonts) // тут системний пошук в маці
         {
-            if (File.Exists(path))
+            if (File.Exists(font))
             {
-                fontPath = path;
+                systemFontPath = font;
                 break;
             }
         }
 
-        if (fontPath != null)
+        if (string.IsNullOrEmpty(systemFontPath))
         {
-            try
-            {
-                byte[] fontData = File.ReadAllBytes(fontPath);
-                var fontBakeResult = TtfFontBaker.Bake(fontData, 18, 1024, 1024, new[] { CharacterRange.BasicLatin });
-                GameFont = fontBakeResult.CreateSpriteFont(GraphicsDevice);
-                Console.WriteLine($"[УСПІХ] Завантажено системний шрифт: {fontPath}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Помилка запікання системного шрифту: {ex.Message}");
-            }
+            throw new Exception("Не вдалося знайти сумісний .ttf шрифт на вашому Mac. Бібліотека не підтримує .ttc формати.");
         }
 
-        if (GameFont == null)
+        byte[] ttfData = File.ReadAllBytes(systemFontPath);
+        var bakedFont = TtfFontBaker.Bake(ttfData, 18, 1024, 1024, new[] { CharacterRange.BasicLatin });
+        GameFont = bakedFont.CreateSpriteFont(GraphicsDevice);
+
+
+        string spritePath = Path.Combine(AppContext.BaseDirectory, "Content", "spritesheet.png");
+        SpriteSheet = Texture2D.FromFile(GraphicsDevice, spritePath);
+        
+        Color[] spriteData = new Color[SpriteSheet.Width * SpriteSheet.Height];
+        SpriteSheet.GetData(spriteData);
+        for (int i = 0; i < spriteData.Length; i++)
         {
-            Console.WriteLine("КРИТИЧНА ПОМИЛКА: Не вдалося знайти жодного системного шрифту.");
+            if (spriteData[i] == Color.Black)
+                spriteData[i] = Color.Transparent;
         }
-        // --- КІНЕЦЬ ЗАВАНТАЖЕННЯ СИСТЕМНОГО ШРИФТУ ---
+        SpriteSheet.SetData(spriteData);
 
-        MapLoader mapLoader = new MapLoader(GraphicsDevice, EntityManagerInstance);
-        string spritePath = Path.Combine(Content.RootDirectory, "spritesheet.png");
-        SpriteSheet = mapLoader.LoadSpriteSheetWithChromaKey(spritePath, Color.Black);
-
-        ScoreManagerInstance.LoadHighScore();
+        ScoreManagerInstance.LoadLastScore();
 
         MenuStateInstance = new MenuState(this, GraphicsDevice);
         GameplayStateInstance = new GameplayState(this, GraphicsDevice);
@@ -128,6 +121,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     public void RestartGame()
     {
+        // Оновлюємо рекорд у пам'яті безпосередньо ПЕРЕД початком нової гри
+        ScoreManagerInstance.UpdateLastScoreInMemory();
+
         ScoreManagerInstance.Reset();
         if (GameplayStateInstance != null)
         {

@@ -29,7 +29,6 @@ public class GameOverState : State
         
         if (Game.GameFont != null)
         {
-            // Математичне центрування кожного рядка відносно ширини екрана (904)
             string t1 = "GAME OVER";
             float x1 = (904 - Game.GameFont.MeasureString(t1).X) / 2;
             spriteBatch.DrawString(Game.GameFont, t1, new Vector2(x1, 230), ColorPalette.NeonPink);
@@ -38,13 +37,13 @@ public class GameOverState : State
             float x2 = (904 - Game.GameFont.MeasureString(t2).X) / 2;
             spriteBatch.DrawString(Game.GameFont, t2, new Vector2(x2, 300), ColorPalette.SoftYellow);
             
-            string t3 = $"LAST SCORE:  {Game.ScoreManagerInstance.LastScore}";
+            string t3 = $"HIGH SCORE:  {Game.ScoreManagerInstance.LastScore}";
             float x3 = (904 - Game.GameFont.MeasureString(t3).X) / 2;
             spriteBatch.DrawString(Game.GameFont, t3, new Vector2(x3, 350), Color.MediumSeaGreen);
-
-            string t4 = "Press ENTER to Restart";
+            
+            string t4 = "PRESS ENTER TO RESTART";
             float x4 = (904 - Game.GameFont.MeasureString(t4).X) / 2;
-            spriteBatch.DrawString(Game.GameFont, t4, new Vector2(x4, 440), Color.White);
+            spriteBatch.DrawString(Game.GameFont, t4, new Vector2(x4, 450), Color.White);
         }
     }
 }

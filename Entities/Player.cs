@@ -12,11 +12,15 @@ public class Player : Entity
     private float _animationTimer = 0f;
     private int _animationFrame = 0;
     private bool _isMoving = false; 
+    
+    // Змінна для зберігання точки спавну
+    private Vector2 _startPosition; 
 
     public Player(Vector2 position, Texture2D texture) : base(position)
     {
         Texture = texture;
-        Speed = 200f; // Стандартна швидкість за замовчуванням
+        Speed = 200f; 
+        _startPosition = position; // Запам'ятовуємо, де з'явився гравець
     }
 
     public override Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, 24, 24);
@@ -24,6 +28,14 @@ public class Player : Entity
     public void SetSpedUp(bool isSpedUp)
     {
         Speed = isSpedUp ? 320f : 200f;
+    }
+
+    // Метод для повернення на базу при втраті життя
+    public void ResetPosition()
+    {
+        Position = _startPosition;
+        _currentDirection = new Vector2(-1, 0);
+        _isMoving = false;
     }
 
     public void Update(GameTime gameTime, CollisionManager collisionManager) 
@@ -39,27 +51,32 @@ public class Player : Entity
         if (direction != Vector2.Zero)
         {
             _isMoving = true;
-            direction.Normalize();
-            _currentDirection = direction; 
-            
-            _animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_animationTimer > 0.15f)
-            {
-                _animationTimer = 0f;
-                _animationFrame = (_animationFrame + 1) % 2;
-            }
+            // Нормалізуємо вектор, щоб рух по діагоналі не був швидшим
+            direction.Normalize(); 
+            _currentDirection = direction;
         }
         else
         {
             _isMoving = false;
         }
 
-        Vector2 nextPosition = Position + direction * Speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-        Rectangle nextBounds = new Rectangle((int)nextPosition.X, (int)nextPosition.Y, 24, 24);
-
-        if (!collisionManager.CheckWallCollision(nextBounds))
+        // Анімація та РУХ відбуваються ТІЛЬКИ тоді, коли затиснута клавіша
+        if (_isMoving)
         {
-            Position = nextPosition;
+            _animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_animationTimer > 0.1f)
+            {
+                _animationFrame = (_animationFrame + 1) % 2;
+                _animationTimer = 0f;
+            }
+
+            Vector2 nextPosition = Position + _currentDirection * Speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+            Rectangle nextBounds = new Rectangle((int)nextPosition.X, (int)nextPosition.Y, 24, 24);
+
+            if (!collisionManager.CheckWallCollision(nextBounds))
+            {
+                Position = nextPosition;
+            }
         }
     }
 

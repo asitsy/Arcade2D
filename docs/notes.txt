@@ -43,3 +43,36 @@ VictoryState — відповідає за екран перемоги.
 А керувати ними всіма буде невеликий менеджер станів (StateManager), який просто перемикатиме ці екрани.
 В цьому коміті треба зробити рефакторинг, але не впевнена, що вийде з першого разу, тому що це зачепить один з ключових файлів (Game1.cs)
 Це все піде замість видаленого utils/GameState.cs
+
+
+
+Logiczny zakalec, czyli „Najlepszy wynik” zamiast „Ostatniego”
+Totalnie pomieszałam logikę i sama zapędziłam się w kozi róg. 
+Zamiast pokazywać wynik z dosłownie poprzedniej gry, zakodowałam system tak, że zapisywał tylko absolutny rekord (High Score). 
+Efekt był komiczny, ale frustrujący: gdy raz udało mi się zebrać wszystkie punkty i zdobyć maksa, napis „LAST SCORE” zamienił się w potwora nie do pobicia. 
+Gra straciła sens. Musiałam całkowicie przepisać klasę ScoreManager, żeby brutalnie i bezwarunkowo nadpisywała plik po każdej, nawet najkrótszej i najbardziej nieudanej partyjce.
+
+Walka z MonoGame o zwykłe pliki (Dramat z formatami)
+Moja gra na samym początku ciągle się crashowała, bo MonoGame uparcie domagało się plików w swoim dziwnym, wewnętrznym formacie .xnb. 
+No a ja miałam zwykłe, czcionki .ttf i obrazki .png. 
+Żeby nie tracić życia na konfigurację ich oficjalnego, strasznie topornego narzędzia, musiałam nakłonić grę do czytania czystych plików. P
+omogła mi w tym zewnętrzna biblioteka SpriteFontPlus, ale zanim zmusiłam ją do współpracy, najeździłam się po dokumentacji.
+Pliki widma, czyli gdzie podział się mój folder „Content”?
+To był moment, w którym myślałam, że naprawdę oszaleję. 
+Kod był napisany idealnie, wszystko powinno śmigać, a po wpisaniu dotnet run konsola rzucała mi w twarz błędami, że nie widzi grafik ani poziomów. 
+Okazało się, że to klasyczny błąd nowicjusza – środowisko .NET budowało grę w osobnym, czystym folderze, ale zapominało zabrać ze sobą moich assetów. 
+Musiałam ręcznie dopisać do pliku .csproj specjalną regułę, która nakazuje komputerowi automatyczne pakowanie całego folderu Content przy każdym uruchomieniu.
+
+Mac kontra czcionki (Wojna formatów .ttc i .ttf)
+Kolejna ściana, w którą uderzyłam, wynikała z tego, że piszę grę na Macu....
+Chciałam po prostu załadować standardową czcionkę z systemu, ale gra znowu wywaliła błąd. 
+Apple oczywiście musiało zrobić po swojemu i zamiast normalnych plików .ttf ukryło w systemie format .ttc (takie pakiety czcionek). 
+Moja biblioteka totalnie tego nie rozumiała i panikowała. 
+Musiałam napisać sprytny algorytm, który sam przeszukuje ukryte zakamarki macOS w poszukiwaniu klasycznych, kompatybilnych plików .ttf, zanim gra w ogóle spróbuje ruszyć.
+
+Git..
+Na sam koniec – wisienka na torcie. 
+Plik tekstowy lastscore.txt zmieniał się dosłownie po każdym moim ruchu w grze. 
+Git widział to jako nową zmianę w kodzie i przy każdym commicie błagał mnie, żebym zapisała mój aktualny wynik. 
+Było to niesamowicie irytujące i zaśmiecało mi historię zmian. Żeby wreszcie mieć święty spokój, musiałam ręcznie wywalić ten plik z pamięci podręcznej Gita i dopisać go do .gitignore. 
+Teraz gra zapisuje wyniki lokalnie na moim dysku, a moje repozytorium jest w końcu idealnie czyste!

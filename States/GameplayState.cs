@@ -11,6 +11,8 @@ public class GameplayState : State
 {
     public float FreezeTimer { get; private set; } = 0f;
     public float PlayerSpeedTimer { get; private set; } = 0f;
+    
+    public int Lives { get; private set; } = 1; 
 
     public bool IsGhostsFrozen => FreezeTimer > 0f;
     public bool IsPlayerSpedUp => PlayerSpeedTimer > 0f;
@@ -23,6 +25,7 @@ public class GameplayState : State
     {
         FreezeTimer = 0f;
         PlayerSpeedTimer = 0f;
+        Lives = 1; 
     }
 
     public override void Update(GameTime gameTime)
@@ -53,22 +56,31 @@ public class GameplayState : State
             }
         }
 
-        // Обходимо обмеження ref: копіюємо у локальні змінні
         float currentFreeze = FreezeTimer;
         float currentSpeed = PlayerSpeedTimer;
 
         bool hitByGhost = Game.CollisionManagerInstance.UpdateGameplayCollisions(
             Game.PlayerInstance, Game.ScoreManagerInstance, ref currentFreeze, ref currentSpeed);
         
-        // Повертаємо оновлені значення у властивості
         FreezeTimer = currentFreeze;
         PlayerSpeedTimer = currentSpeed;
 
         if (hitByGhost)
         {
-            _ = Game.ScoreManagerInstance.SaveHighScoreAsync();
-            Game.ChangeState(Game.GameOverStateInstance);
-            return;
+            if (Lives > 0)
+            {
+                Lives--; 
+                Game.PlayerInstance.ResetPosition(); 
+                FreezeTimer = 2f; 
+                PlayerSpeedTimer = 0f; 
+            }
+            else
+            {
+                // ВИПРАВЛЕНО: Викликаємо оновлений метод збереження останнього результату
+                _ = Game.ScoreManagerInstance.SaveLastScoreAsync();
+                Game.ChangeState(Game.GameOverStateInstance);
+                return;
+            }
         }
 
         int remainingTargets = Game.EntityManagerInstance.GetEntities<Pellet>().Count + 
@@ -77,7 +89,8 @@ public class GameplayState : State
 
         if (remainingTargets == 0)
         {
-            _ = Game.ScoreManagerInstance.SaveHighScoreAsync();
+            // ВИПРАВЛЕНО: Викликаємо оновлений метод збереження останнього результату
+            _ = Game.ScoreManagerInstance.SaveLastScoreAsync();
             Game.ChangeState(Game.VictoryStateInstance);
         }
     }
@@ -109,6 +122,8 @@ public class GameplayState : State
                 spriteBatch.DrawString(Game.GameFont, "SPEED UP:", new Vector2(710, 295), Color.Orange);
                 spriteBatch.DrawString(Game.GameFont, $"{PlayerSpeedTimer:F1}s", new Vector2(710, 325), Color.Orange);
             }
+            
+            spriteBatch.DrawString(Game.GameFont, $"LIVES: {Lives}", new Vector2(710, 375), Color.Red);
         }
     }
 }

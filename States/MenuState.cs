@@ -45,14 +45,12 @@ public class MenuState : State
             spriteBatch.Draw(Game.PixelTexture, _playButtonRect, new Color(20, 20, 40, 245));
             DrawBorder(spriteBatch, _playButtonRect, 3, neonColor);
             
-            // --- ДИНАМІЧНИЙ ЦЕНТР ДЛЯ "PLAY" ВСЕРЕДИНІ КНОПКИ ---
             string textPlay = "PLAY";
             Vector2 sizePlay = Game.GameFont.MeasureString(textPlay);
             float playX = _playButtonRect.X + (_playButtonRect.Width - sizePlay.X) / 2;
             float playY = _playButtonRect.Y + (_playButtonRect.Height - sizePlay.Y) / 2;
             spriteBatch.DrawString(Game.GameFont, textPlay, new Vector2(playX, playY), neonColor);
 
-            // --- ДИНАМІЧНИЙ ЦЕНТР ДЛЯ АВТОРА ---
             string authorText = "Arcade2D made by Anastasiia Tsyban";
             Vector2 sizeAuthor = Game.GameFont.MeasureString(authorText);
             float authorX = (904 - sizeAuthor.X) / 2; // Центруємо відносно всього екрана (904)

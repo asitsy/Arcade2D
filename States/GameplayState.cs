@@ -1,64 +1,83 @@
 using System;
-using System.IO;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Arcade2D.Entities;
 using Arcade2D.Utils;
-using Arcade2D; 
 
 namespace Arcade2D.States;
 
 public class GameplayState : State
 {
+    public float FreezeTimer { get; private set; } = 0f;
+    public float PlayerSpeedTimer { get; private set; } = 0f;
+
+    public bool IsGhostsFrozen => FreezeTimer > 0f;
+    public bool IsPlayerSpedUp => PlayerSpeedTimer > 0f;
+
     public GameplayState(Game1 game, GraphicsDevice graphicsDevice) : base(game, graphicsDevice)
     {
     }
 
+    public void ResetTimers()
+    {
+        FreezeTimer = 0f;
+        PlayerSpeedTimer = 0f;
+    }
+
     public override void Update(GameTime gameTime)
     {
-        if (Game.IsPlayerSpedUp)
+        if (IsPlayerSpedUp)
         {
-            Game.PlayerInstance.Speed = 320f;
-            Game.PlayerSpeedTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            Game.PlayerInstance.SetSpedUp(true);
+            PlayerSpeedTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
         else
         {
-            Game.PlayerInstance.Speed = 200f;
+            Game.PlayerInstance.SetSpedUp(false);
         }
 
         Game.PlayerInstance.Update(gameTime, Game.CollisionManagerInstance);
 
-        if (Game.IsGhostsFrozen)
+        if (IsGhostsFrozen)
         {
-            Game.FreezeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            FreezeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
         var currentGhosts = Game.EntityManagerInstance.GetEntities<Ghost>(); 
         foreach (Ghost ghost in currentGhosts)
         {
-            if (!Game.IsGhostsFrozen)
+            if (!IsGhostsFrozen)
             {
                 ghost.Update(gameTime, Game.CollisionManagerInstance);
             }
         }
 
+        // Обходимо обмеження ref: копіюємо у локальні змінні
+        float currentFreeze = FreezeTimer;
+        float currentSpeed = PlayerSpeedTimer;
+
         bool hitByGhost = Game.CollisionManagerInstance.UpdateGameplayCollisions(
-            Game.PlayerInstance, ref Game.Score, ref Game.FreezeTimer, ref Game.PlayerSpeedTimer);
+            Game.PlayerInstance, Game.ScoreManagerInstance, ref currentFreeze, ref currentSpeed);
         
+        // Повертаємо оновлені значення у властивості
+        FreezeTimer = currentFreeze;
+        PlayerSpeedTimer = currentSpeed;
+
         if (hitByGhost)
         {
-            Game.LastScore = Game.Score;
-            _ = Game.SaveLastScoreAsync(Game.Score);
+            _ = Game.ScoreManagerInstance.SaveHighScoreAsync();
             Game.ChangeState(Game.GameOverStateInstance);
+            return;
         }
 
-        if (!Game.EntityManagerInstance.GetEntities<Pellet>().Any() && 
-            !Game.EntityManagerInstance.GetEntities<PowerPellet>().Any() && 
-            !Game.EntityManagerInstance.GetEntities<SpeedPellet>().Any())
+        int remainingTargets = Game.EntityManagerInstance.GetEntities<Pellet>().Count + 
+                               Game.EntityManagerInstance.GetEntities<PowerPellet>().Count + 
+                               Game.EntityManagerInstance.GetEntities<SpeedPellet>().Count;
+
+        if (remainingTargets == 0)
         {
-            Game.LastScore = Game.Score;
-            _ = Game.SaveLastScoreAsync(Game.Score);
+            _ = Game.ScoreManagerInstance.SaveHighScoreAsync();
             Game.ChangeState(Game.VictoryStateInstance);
         }
     }
@@ -67,36 +86,28 @@ public class GameplayState : State
     {
         Game.EntityManagerInstance.Draw(spriteBatch);
 
-        if (Game.IsGhostsFrozen)
-        {
-            foreach (Ghost ghost in Game.EntityManagerInstance.GetEntities<Ghost>())
-            {
-                spriteBatch.Draw(Game.PixelTexture, ghost.Bounds, new Color(0, 150, 255, 100));
-            }
-        }
-
         if (Game.GameFont != null)
         {
             spriteBatch.DrawString(Game.GameFont, "ARCADE 2D", new Vector2(710, 30), Color.White);
             spriteBatch.DrawString(Game.GameFont, "----------", new Vector2(710, 55), ColorPalette.Lavender);
-            spriteBatch.DrawString(Game.GameFont, $"SCORE: {Game.Score}", new Vector2(710, 90), ColorPalette.SoftYellow);
-            spriteBatch.DrawString(Game.GameFont, $"LAST:  {Game.LastScore}", new Vector2(710, 125), Color.MediumSeaGreen);
+            spriteBatch.DrawString(Game.GameFont, $"SCORE: {Game.ScoreManagerInstance.Score}", new Vector2(710, 90), ColorPalette.SoftYellow);
+            spriteBatch.DrawString(Game.GameFont, $"LAST:  {Game.ScoreManagerInstance.LastScore}", new Vector2(710, 125), Color.MediumSeaGreen);
             
             int totalPelletsLeft = Game.EntityManagerInstance.GetEntities<Pellet>().Count + 
                                    Game.EntityManagerInstance.GetEntities<PowerPellet>().Count + 
                                    Game.EntityManagerInstance.GetEntities<SpeedPellet>().Count;
             spriteBatch.DrawString(Game.GameFont, $"LEFT: {totalPelletsLeft}", new Vector2(710, 165), ColorPalette.Lavender);
 
-            if (Game.IsGhostsFrozen)
+            if (IsGhostsFrozen)
             {
                 spriteBatch.DrawString(Game.GameFont, "FREEZE:", new Vector2(710, 215), Color.Cyan);
-                spriteBatch.DrawString(Game.GameFont, $"{Game.FreezeTimer:F1}s", new Vector2(710, 245), Color.Cyan);
+                spriteBatch.DrawString(Game.GameFont, $"{FreezeTimer:F1}s", new Vector2(710, 245), Color.Cyan);
             }
 
-            if (Game.IsPlayerSpedUp)
+            if (IsPlayerSpedUp)
             {
-                spriteBatch.DrawString(Game.GameFont, "SPEED UP:", new Vector2(710, 295), ColorPalette.Gold);
-                spriteBatch.DrawString(Game.GameFont, $"{Game.PlayerSpeedTimer:F1}s", new Vector2(710, 325), ColorPalette.Gold);
+                spriteBatch.DrawString(Game.GameFont, "SPEED UP:", new Vector2(710, 295), Color.Orange);
+                spriteBatch.DrawString(Game.GameFont, $"{PlayerSpeedTimer:F1}s", new Vector2(710, 325), Color.Orange);
             }
         }
     }

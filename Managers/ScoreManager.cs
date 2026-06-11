@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Arcade2D.Managers;
 
@@ -31,11 +32,12 @@ public class ScoreManager
         }
     }
 
-    public void SaveLastScore()
+    public async Task SaveLastScoreAsync()     // async!!!
     {
         try
         {
-            File.WriteAllText(_lastScoreFilename, Score.ToString());
+            // файл асинхронно, не блокуючи гру
+            await File.WriteAllTextAsync(_lastScoreFilename, Score.ToString());
         }
         catch (Exception) { }
     }

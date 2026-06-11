@@ -76,8 +76,8 @@ public class GameplayState : State
             }
             else
             {
-                // ВИПРАВЛЕНО: Синхронне збереження перед зміною стану
-                Game.ScoreManagerInstance.SaveLastScore();
+
+                _ = Game.ScoreManagerInstance.SaveLastScoreAsync(); //async/ discard
                 Game.ChangeState(Game.GameOverStateInstance);
                 return;
             }
@@ -89,8 +89,7 @@ public class GameplayState : State
 
         if (remainingTargets == 0)
         {
-            // ВИПРАВЛЕНО: Синхронне збереження перед зміною стану
-            Game.ScoreManagerInstance.SaveLastScore();
+            _ = Game.ScoreManagerInstance.SaveLastScoreAsync(); // async/discard
             Game.ChangeState(Game.VictoryStateInstance);
         }
     }

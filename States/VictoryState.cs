@@ -37,7 +37,6 @@ public class VictoryState : State
             float x2 = (904 - Game.GameFont.MeasureString(t2).X) / 2;
             spriteBatch.DrawString(Game.GameFont, t2, new Vector2(x2, 300), Color.White);
             
-            // ВИПРАВЛЕНО: Текст тепер чесно каже, що це ОСТАННІЙ результат
             string t3 = $"LAST SCORE:  {Game.ScoreManagerInstance.LastScore}";
             float x3 = (904 - Game.GameFont.MeasureString(t3).X) / 2;
             spriteBatch.DrawString(Game.GameFont, t3, new Vector2(x3, 350), Color.MediumSeaGreen);

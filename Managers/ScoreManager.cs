@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace Arcade2D.Managers;
 
@@ -32,17 +31,16 @@ public class ScoreManager
         }
     }
 
-    // Рахунок записується у файл ЗАВЖДИ при завершенні гри
-    public async Task SaveLastScoreAsync()
+    public void SaveLastScore()
     {
         try
         {
-            await File.WriteAllTextAsync(_lastScoreFilename, Score.ToString());
+            File.WriteAllText(_lastScoreFilename, Score.ToString());
         }
         catch (Exception) { }
     }
 
-    public void UpdateLastScoreInMemory()     // Рахунок поточної гри стає "останнім" для наступного запуску
+    public void UpdateLastScoreInMemory()     
     {
         LastScore = Score;
     }

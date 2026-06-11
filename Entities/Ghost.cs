@@ -26,19 +26,14 @@ public class Ghost : Entity
     private int _ghostType = 0; 
     private float _animationTimer = 0f;
     private int _animationFrame = 0;
-
-    // Автоматичний лічильник: гарантує, що привиди будуть різнокольоровими
-    // навіть якщо в Game1 або GameplayState забули передати ID кольору.
     private static int _globalGhostCounter = 0;
 
-    // значення за замовчуванням встановлено в -1 для увімкнення авто-розподілу
     public Ghost(Vector2 position, Texture2D texture, int ghostType = -1) : base(position)
     {
         Texture = texture;
         
         if (ghostType == -1)
         {
-            // Якщо тип не вказано, автоматично циклічно видаємо: 0, 1, 2, 3
             _ghostType = _globalGhostCounter % 4;
             _globalGhostCounter++;
         }
@@ -52,7 +47,8 @@ public class Ghost : Entity
 
     public override Rectangle Bounds => new((int)Position.X, (int)Position.Y, 24, 24);
 
-    public void Update(GameTime gameTime, CollisionManager collisionManager)     
+    // Додаємо передачу Player, щоб тільки один привид його бачив
+    public void Update(GameTime gameTime, CollisionManager collisionManager, Player player)     
     {
         _animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         if (_animationTimer > 0.15f)
@@ -69,7 +65,7 @@ public class Ghost : Entity
         if (collision)
         {
             Point currentTile = new((int)((Position.X - _mapOffset.X) / 32), (int)((Position.Y - _mapOffset.Y) / 32));
-            ChooseNewDirection(collisionManager, currentTile, true);
+            ChooseNewDirection(collisionManager, currentTile, true, player);
             
             nextPosition = Position + _direction * Speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
             nextBounds = new((int)nextPosition.X, (int)nextPosition.Y, Bounds.Width, Bounds.Height);
@@ -84,9 +80,12 @@ public class Ghost : Entity
         if (tile != _lastTile)
         {
             _lastTile = tile;
-            if (_random.Next(100) < 50) 
+            
+            // Якщо це червоний привид (0), він завжди аналізує перехрестя.
+            // Інші привиди мають 50% шанс повернути (як було раніше).
+            if (_ghostType == 0 || _random.Next(100) < 50) 
             {
-                ChooseNewDirection(collisionManager, tile, false);
+                ChooseNewDirection(collisionManager, tile, false, player);
             }
         }
 
@@ -99,7 +98,7 @@ public class Ghost : Entity
         }
     }
 
-    private void ChooseNewDirection(CollisionManager collisionManager, Point currentTile, bool allowReverse)     
+    private void ChooseNewDirection(CollisionManager collisionManager, Point currentTile, bool allowReverse, Player player)     
     {
         Vector2 reverseDirection = -_direction;
         Vector2 tileCenterPosition = new Vector2(currentTile.X * 32, currentTile.Y * 32) + _mapOffset;
@@ -110,7 +109,6 @@ public class Ghost : Entity
             {
                 Vector2 targetPosition = tileCenterPosition + dir * 32;
                 Rectangle testBounds = new((int)targetPosition.X, (int)targetPosition.Y, Bounds.Width, Bounds.Height);
-                
                 return !collisionManager.CheckWallCollision(testBounds);                 
             })
             .Where(dir => allowReverse || dir != reverseDirection)
@@ -123,26 +121,42 @@ public class Ghost : Entity
 
         if (availableDirections.Any())
         {
-            _direction = availableDirections.ElementAt(_random.Next(availableDirections.Count));
+            bool chasePlayer = false;
+            
+            // ТІЛЬКИ червоний привид (тип 0) переслідує гравця
+            if (player != null && _ghostType == 0)
+            {
+                chasePlayer = _random.Next(100) < 85; // 85% ймовірність обрати правильний шлях
+            }
+
+            if (chasePlayer)
+            {
+                // Шукаємо найкоротший шлях до гравця
+                _direction = availableDirections.OrderBy(dir =>
+                {
+                    Vector2 nextTilePos = tileCenterPosition + dir * 32;
+                    return Vector2.Distance(nextTilePos, player.Position);
+                }).First();
+            }
+            else
+            {
+                // Для всіх інших привидів (або якщо червоний схибив) - випадковий напрямок
+                _direction = availableDirections.ElementAt(_random.Next(availableDirections.Count));
+            }
             
             if (_direction.X != 0) Position = new Vector2(Position.X, tileCenterPosition.Y);
             if (_direction.Y != 0) Position = new Vector2(tileCenterPosition.X, Position.Y);
         }
     }
 
-    public override void Update(GameTime gameTime)
-    {
-    }
+    public override void Update(GameTime gameTime) { }
 
     public override void Draw(SpriteBatch spriteBatch)
     {
         if (Texture != null && Texture.Width > 1)
         {
             int size = 16; 
-            int startX = 456; // Початок блоку персонажів
-            
-            // Математичний розрахунок Y-координати для кожного типу:
-            // 0 - Червоний (Y=64), 1 - Рожевий (Y=80), 2 - Блакитний (Y=96), 3 - Помаранчевий (Y=112)
+            int startX = 456; 
             int startY = 64 + (_ghostType * size);
             
             int directionOffsetX = 0;

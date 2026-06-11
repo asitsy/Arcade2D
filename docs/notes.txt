@@ -76,3 +76,13 @@ Plik tekstowy lastscore.txt zmieniał się dosłownie po każdym moim ruchu w gr
 Git widział to jako nową zmianę w kodzie i przy każdym commicie błagał mnie, żebym zapisała mój aktualny wynik. 
 Było to niesamowicie irytujące i zaśmiecało mi historię zmian. Żeby wreszcie mieć święty spokój, musiałam ręcznie wywalić ten plik z pamięci podręcznej Gita i dopisać go do .gitignore. 
 Teraz gra zapisuje wyniki lokalnie na moim dysku, a moje repozytorium jest w końcu idealnie czyste!
+
+
+Okazuje się, że duchy mają imiona. Inky, Blinky, Pinky, Clyde
+
+
+
+Notatka dotycząca naprawy błędu z zapisem wyniku:
+Problem z nieprawidłowym wyświetlaniem ostatniego wyniku (Last Score) został rozwiązany.
+Przyczyną błędu była asynchroniczność podczas zapisu danych do pliku tekstowego za pomocą obiektu Task. Proces zapisu w tle nie nadążał z aktualizacją pliku na dysku przed momentem, w którym gra przechodziła do ekranu końcowego i próbowała natychmiast odczytać te same dane. W rezultacie system ładował nieaktualne wartości z poprzednich gier.
+Rozwiązaniem było całkowite usunięcie asynchroniczności (Task oraz parametrów async/await) z klasy ScoreManager i zastąpienie jej klasycznym, synchronicznym zapisem. Ponieważ zapisywane dane to tylko jedna liczba, operacja wykonuje się natychmiastowo i nie wpływa na płynność gry. Dzięki temu zachowana jest prawidłowa kolejność działań: gra najpierw w pełni zapisuje nowy wynik, a dopiero potem go odczytuje i wyświetla na ekranie.

@@ -52,7 +52,7 @@ public class GameplayState : State
         {
             if (!IsGhostsFrozen)
             {
-                ghost.Update(gameTime, Game.CollisionManagerInstance);
+                ghost.Update(gameTime, Game.CollisionManagerInstance, Game.PlayerInstance);
             }
         }
 
@@ -76,8 +76,8 @@ public class GameplayState : State
             }
             else
             {
-                // ВИПРАВЛЕНО: Викликаємо оновлений метод збереження останнього результату
-                _ = Game.ScoreManagerInstance.SaveLastScoreAsync();
+                // ВИПРАВЛЕНО: Синхронне збереження перед зміною стану
+                Game.ScoreManagerInstance.SaveLastScore();
                 Game.ChangeState(Game.GameOverStateInstance);
                 return;
             }
@@ -89,8 +89,8 @@ public class GameplayState : State
 
         if (remainingTargets == 0)
         {
-            // ВИПРАВЛЕНО: Викликаємо оновлений метод збереження останнього результату
-            _ = Game.ScoreManagerInstance.SaveLastScoreAsync();
+            // ВИПРАВЛЕНО: Синхронне збереження перед зміною стану
+            Game.ScoreManagerInstance.SaveLastScore();
             Game.ChangeState(Game.VictoryStateInstance);
         }
     }

@@ -50,6 +50,10 @@ public class MapLoader
         Texture2D pelletTexture = new Texture2D(_graphicsDevice, 1, 1);
         pelletTexture.SetData(new[] { ColorPalette.SoftYellow });
 
+        // ДОДАНО: Окрема рожева текстура для бонусів швидкості
+        Texture2D speedPelletTexture = new Texture2D(_graphicsDevice, 1, 1);
+        speedPelletTexture.SetData(new[] { Color.HotPink });
+
         // Створюємо та додаємо гравця
         Player player = new Player(new Vector2(32 * 10 + 4, 32 * 10 + 4) + _mapOffset, spriteSheet);
         _entityManager.Add(player);
@@ -98,7 +102,8 @@ public class MapLoader
                     }
                     else if (isSpeedPellet)
                     {
-                        _entityManager.Add(new SpeedPellet(pos + new Vector2(8, 8), pelletTexture));
+                        // ВИПРАВЛЕНО: Використовуємо speedPelletTexture
+                        _entityManager.Add(new SpeedPellet(pos + new Vector2(8, 8), speedPelletTexture));
                     }
                     else if ((row + col) % 2 == 0)
                     {
